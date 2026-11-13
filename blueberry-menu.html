@@ -1,0 +1,2951 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="color-scheme" content="light" />
+<link rel="icon" href="data:," />
+<title>Blue Berry — Menu · Hay Riad, Rabat</title>
+<style>
+  :root{
+    --yellow:#F2B705; --yellow-2:#F8BD56; --yellow-soft:#FFF6DB;
+    --black:#22303F; --ink:#22303F; --muted:#5B6B7F; --paper:#FFFFFF;
+    --cream:#F4F8FC; --line:#D5E2F0; --line-dark:#A9C3DF;
+    --green:#15803D; --red:#DC2626;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0; color:var(--ink);
+    background:var(--cream);
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+    line-height:1.6; -webkit-font-smoothing:antialiased;
+  }
+  img{max-width:100%;display:block}
+  a{color:inherit}
+
+  .poster{ max-width:1180px; margin:0 auto; background:transparent; min-height:100vh; }
+
+  /* ================= HERO ================= */
+  .hero{ padding:34px 30px 8px; text-align:center; }
+  .brand-lockup{ display:flex; align-items:center; justify-content:center; gap:16px; }
+  .brand-icon-chip{ background:var(--paper); border-radius:50%; padding:10px; border:3px solid var(--yellow); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .brand-icon{ height:72px; width:auto; display:block; }
+  .brand-word{ font-weight:900; font-size:clamp(1.6rem,5vw,2.4rem); line-height:1.05; color:#FFFFFF; letter-spacing:.02em; white-space:nowrap; }
+  .brand-word .hl{ background:var(--yellow); color:#22303F; padding:2px 10px; border-radius:10px; }
+  .menu-title{ margin:20px 0 0; font-weight:900; font-size:clamp(3.2rem,12vw,5.2rem); line-height:1; color:#FFFFFF; letter-spacing:.08em; }
+  .menu-sub{ display:inline-block; margin:12px 0 0; background:var(--yellow); color:#22303F; font-weight:900; letter-spacing:.28em; font-size:1rem; padding:7px 20px; border-radius:999px; }
+  .hero-note{
+    margin:20px auto 0; max-width:640px; text-align:left; font-weight:700; font-size:.95rem; color:var(--ink);
+    background:var(--yellow-soft); border:2px solid var(--yellow);
+    padding:12px 14px; border-radius:12px;
+  }
+
+  /* ================= CATEGORY PILLS ================= */
+  .cat-pills{
+    position:sticky; top:0; z-index:50;
+    display:flex; gap:8px; overflow-x:auto; scrollbar-width:none;
+    padding:12px 30px; background:#22303F;
+    border-top:3px solid var(--yellow); border-bottom:3px solid var(--yellow);
+  }
+  .cat-pills::-webkit-scrollbar{ display:none; }
+  .pill{
+    flex:0 0 auto; text-decoration:none;
+    background:var(--paper); color:var(--black);
+    border:2px solid var(--yellow); border-radius:999px;
+    font-weight:900; font-size:14.5px; padding:8px 16px; white-space:nowrap;
+  }
+  .pill:active{ background:var(--yellow); }
+
+  /* ================= MENU GRID ================= */
+  .menu-grid{
+    display:grid; grid-template-columns:1fr 1fr;
+    gap:18px; padding:24px 30px 10px;
+  }
+  .col{
+    background:var(--paper); border:1px solid var(--line); border-radius:18px;
+    padding:16px 16px 10px; min-width:0; box-shadow:0 4px 14px rgba(0,0,0,.35);
+  }
+  .col-head{
+    display:flex; align-items:center; gap:14px;
+    padding:0; margin:0 0 4px;
+  }
+  .cat-photo{
+    width:104px; height:104px; border-radius:50%; object-fit:cover; flex-shrink:0;
+    border:4px solid var(--yellow); box-shadow:0 4px 12px rgba(0,0,0,.3);
+  }
+  .col-head h2{
+    margin:0; font-weight:900; line-height:1.2;
+    font-size:clamp(1.4rem,3vw,1.8rem); color:var(--black);
+  }
+  .col-head h2::after{
+    content:""; display:block; width:56px; height:4px;
+    background:var(--yellow); border-radius:2px; margin-top:6px;
+  }
+  .col-intro{ color:var(--muted); font-weight:600; font-size:.92rem; margin:10px 2px 4px; }
+
+  .dish{ padding:11px 2px 12px; border-bottom:1px dashed #D5E2F0; display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; }
+  .dish:last-child{ border-bottom:none; }
+  .dish .d-names{ flex:1; min-width:0; text-align:left; }
+  .dish .d-name{ font-weight:900; font-size:clamp(1.05rem,2.2vw,1.2rem); line-height:1.3; color:var(--black); }
+  .dish .d-ar{ font-size:.88rem; font-weight:700; color:var(--muted); margin-top:1px; text-align:left; }
+  .dish .d-desc{ font-weight:700; font-size:.72rem; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); margin-top:2px; }
+  .dish .d-dots{ flex:1 1 24px; min-width:24px; border-bottom:2px dotted #A9C3DF; transform:translateY(-3px); }
+  .dish .d-price{
+    font-weight:900; font-size:1.12rem; line-height:1; color:var(--black); white-space:nowrap;
+  }
+  .dish .d-price small{ font-weight:900; font-size:.62em; letter-spacing:.06em; }
+
+  /* ================= FOOTER ================= */
+  footer{ margin-top:34px; background:var(--black); color:var(--yellow-2); padding:34px 30px 36px; }
+  .bon-appetit{
+    margin:26px 0 0; text-align:center;
+    font-family:Georgia,'Times New Roman',serif; font-style:italic; font-weight:900;
+    font-size:clamp(1.9rem,5vw,2.7rem); color:var(--yellow-2); letter-spacing:.02em;
+  }
+  .foot-flex{ display:flex; align-items:center; justify-content:space-between; gap:36px; flex-wrap:wrap; }
+  .foot-text{ flex:1 1 auto; min-width:0; }
+  .foot-open{ font-weight:900; text-transform:uppercase; font-size:clamp(1.4rem,4.5vw,2.2rem); line-height:1.2; color:var(--yellow-2); margin:0; letter-spacing:.01em; }
+  .foot-open .row2{ display:block; }
+  .foot-brand{ margin:20px 0 0; font-weight:700; font-size:1rem; color:var(--yellow-2); }
+  .foot-brand .latin{ font-weight:900; letter-spacing:.03em; text-transform:uppercase; }
+  .qr-box{ flex:0 0 auto; background:var(--black); text-align:center; border:3px solid var(--yellow); width:clamp(152px,20vw,186px); border-radius:14px; overflow:hidden; }
+  .qr-img{ background:#fff; padding:12px; min-height:150px; display:flex; align-items:center; justify-content:center; }
+  .qr-img span{ color:#111; font-weight:900; font-size:14px; line-height:1.5; }
+  .qr-img img{ width:100%; height:auto; display:block; }
+  .qr-box p{ margin:0; background:var(--black); color:var(--yellow-2); font-weight:900; font-size:.82rem; letter-spacing:.18em; text-transform:uppercase; padding:9px 6px 11px; }
+
+  @media (max-width:860px){
+    .brand-icon{ height:56px; }
+    .brand-word{ font-size:1.35rem; }
+    .cat-photo{ width:84px; height:84px; }
+    .menu-grid{ grid-template-columns:1fr; padding:20px 20px 0; }
+    .cat-pills{ padding:10px 16px; }
+    .foot-flex{ flex-direction:column; align-items:center; gap:26px; }
+    .foot-text{ text-align:center; }
+    .qr-box{ align-self:center; }
+  }
+  @media print{ body{ background:#fff; } .poster{ max-width:none; } }
+  @media (prefers-reduced-motion: reduce){ html{ scroll-behavior:auto; } }
+
+
+  /* ---------- Blue Berry: search + groups ---------- */
+  .search-wrap{ max-width:1180px; margin:18px auto 0; padding:0 30px; }
+  .search-wrap input{
+    width:100%; height:52px; padding:10px 18px;
+    font-size:17px; font-family:inherit; font-weight:600;
+    border:2px solid var(--line); border-radius:999px;
+    background:#fff; color:var(--ink);
+  }
+  .search-wrap input:focus{ outline:none; border-color:var(--yellow); box-shadow:0 0 0 3px rgba(119,163,220,.35); }
+  .menu-title{ color:#77A3DC; }
+  .brand-lockup .bb-lockup{ font-size:36px; }
+  @media (max-width:860px){ .brand-lockup .bb-lockup{ font-size:26px; } }
+  .search-count{ max-width:1180px; margin:10px auto 0; padding:0 30px; color:#5B6B7F; font-weight:700; font-size:14.5px; }
+  .group-head{ font-weight:900; font-size:1.05rem; color:var(--black); margin:14px 2px 2px; text-transform:uppercase; letter-spacing:.03em; }
+  .group-note{ color:var(--muted); font-weight:600; font-size:.88rem; margin:4px 2px 6px; }
+  .sec-count{ font-size:.8rem; font-weight:800; color:var(--muted); white-space:nowrap; }
+  .dish .d-opt{ font-weight:700; font-size:.78rem; letter-spacing:.02em; color:var(--muted); margin-top:2px; }
+  .no-results{ grid-column:1 / -1; background:var(--paper); border-radius:18px; padding:34px 20px; text-align:center; font-weight:800; color:var(--muted); }
+  .menu-sub{ background:#F2B705; color:#22303F; }
+  .bon-appetit{ color:#F2B705; }
+  
+  /* ---------- Blue Berry logo lockup (faithful rebuild of the real logo) ---------- */
+  .bb-lockup{ display:inline-flex; align-items:center; gap:.35em; font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif; }
+  .bb-word{ display:flex; flex-direction:column; line-height:1; }
+  .bb-name{ font-weight:900; font-style:italic; font-size:1em; letter-spacing:.02em; color:#77A3DC; white-space:nowrap; }
+  .bb-since{ font-size:.30em; font-weight:800; letter-spacing:.34em; color:#2E4A6B; text-align:right; margin-top:.45em; white-space:nowrap; }
+  .bb-cluster{ height:1.5em; width:auto; flex-shrink:0; }
+
+</style>
+</head>
+<body>
+
+<div class="poster">
+
+
+  <!-- ================= HERO ================= -->
+  <header class="hero">
+    <div class="brand-lockup"><span class="bb-lockup"><span class="bb-word"><span class="bb-name">BLUE BERRY</span><span class="bb-since">DEPUIS 1998</span></span><svg class="bb-cluster" viewBox="0 0 120 118" aria-hidden="true"><path d="M60 36 C 76 24, 90 16, 95 5" fill="none" stroke="#77A3DC" stroke-width="5" stroke-linecap="round"/><path d="M52 38 Q 50 22, 64 16 Q 66 30, 52 38 Z" fill="#77A3DC" stroke="#fff" stroke-width="1.5"/><g fill="#77A3DC" stroke="#fff" stroke-width="2"><circle cx="60" cy="34" r="10"/><circle cx="42" cy="48" r="11"/><circle cx="78" cy="48" r="11"/><circle cx="27" cy="64" r="11"/><circle cx="57" cy="64" r="12"/><circle cx="87" cy="64" r="11"/><circle cx="41" cy="82" r="11"/><circle cx="71" cy="82" r="11"/><circle cx="56" cy="98" r="11"/><circle cx="30" cy="46" r="8"/><circle cx="90" cy="46" r="8"/></g><g fill="#fff"><circle cx="56" cy="30" r="1.8"/><circle cx="38" cy="44" r="1.8"/><circle cx="74" cy="44" r="1.8"/><circle cx="23" cy="60" r="1.8"/><circle cx="53" cy="60" r="1.8"/><circle cx="83" cy="60" r="1.8"/><circle cx="37" cy="78" r="1.8"/><circle cx="67" cy="78" r="1.8"/><circle cx="52" cy="94" r="1.8"/></g><circle cx="106" cy="14" r="9" fill="#fff" stroke="#77A3DC" stroke-width="2"/><text x="106" y="18" font-size="11" font-weight="700" text-anchor="middle" fill="#77A3DC" font-family="system-ui,Arial,sans-serif">R</text></svg></span></div>
+    <h1 class="menu-title">MENU</h1>
+    <p class="menu-sub">RESTAURANT · HAY RIAD</p>
+    <p class="hero-note">Restaurant multi-cuisines — italien, chinois, sushi, pizza, fruits de mer et café. Ouvert tous les jours 08:00 – 23:00 · Av. Mehdi Ben Barka, Aswak Assalam, Hay Riad, Rabat · Tél. 0661 72 39 54</p>
+  </header>
+
+  <div class="search-wrap"><input id="menuSearch" type="search" placeholder="Rechercher un plat… (ex. poke, pizza, couscous)" aria-label="Rechercher un plat" autocomplete="off" /></div>
+  <nav class="cat-pills" id="catPills" aria-label="Catégories"></nav>
+  <p class="search-count" id="searchCount" hidden></p>
+
+
+  <!-- ================= MENU ================= -->
+  <main class="menu-grid" id="menuGrid"></main>
+
+
+  <!-- ================= FOOTER ================= -->
+  <footer>
+    <div class="foot-flex">
+      <div class="foot-text">
+        <p class="foot-open">Ouvert tous les jours 08:00 — 23:00 • <span class="row2">Sur place &amp; À emporter</span></p>
+        <p class="foot-brand"><span class="latin">Blue Berry</span> — Av. Mehdi Ben Barka, Aswak Assalam, Hay Riad, Rabat · Tél. 0661 72 39 54 · Instagram blueberry_maroc · www.blueberry.ma</p>
+      </div>
+      <div class="qr-box">
+        <div class="qr-img"><span>Scannez le QR code de votre table pour commander</span></div>
+        <p>Sur place &amp; À emporter</p>
+      </div>
+    </div>
+    <p class="bon-appetit">Bon appétit !</p>
+  </footer>
+
+</div><!-- /poster -->
+
+<script>
+/* Blue Berry — menu (source: menu.json, 333 plats, 19 sections).
+   Les 6 Poké Bowls nommés n'ont pas de prix imprimé : affichés en
+   Régulier 62 / XL 85 DH (les deux tarifs Poké Bowl imprimés). */
+var MENU = [
+  {
+    "id": "boissons",
+    "fr": "BOISSONS",
+    "groups": [
+      {
+        "name": "ICED",
+        "note": "",
+        "items": [
+          {
+            "id": "boissons-iced-iced-americano",
+            "name": "Iced Americano",
+            "note": "",
+            "price": 24
+          },
+          {
+            "id": "boissons-iced-iced-latte",
+            "name": "Iced Latte",
+            "note": "",
+            "price": 24
+          },
+          {
+            "id": "boissons-iced-iced-caramel-macchiato",
+            "name": "Iced Caramel Macchiato",
+            "note": "",
+            "price": 30
+          },
+          {
+            "id": "boissons-iced-iced-matcha-latte",
+            "name": "Iced Matcha Latte",
+            "note": "",
+            "price": 48
+          },
+          {
+            "id": "boissons-iced-blueberry-iced-matcha-latte",
+            "name": "Blueberry Iced Matcha Latte",
+            "note": "",
+            "price": 58
+          },
+          {
+            "id": "boissons-iced-mango-iced-matcha-latte",
+            "name": "Mango Iced Matcha Latte",
+            "note": "",
+            "price": 58
+          },
+          {
+            "id": "boissons-iced-affogato",
+            "name": "Affogato",
+            "note": "",
+            "price": 42
+          },
+          {
+            "id": "boissons-iced-supplement-laits-vegetaux",
+            "name": "Supplément laits végétaux",
+            "note": "",
+            "price": 7
+          }
+        ]
+      },
+      {
+        "name": "BOISSONS CHAUDES",
+        "note": "",
+        "items": [
+          {
+            "id": "boissons-boissons-chaudes-espresso",
+            "name": "Espresso",
+            "note": "",
+            "price": 16
+          },
+          {
+            "id": "boissons-boissons-chaudes-nespresso",
+            "name": "Nespresso",
+            "note": "",
+            "price": 18
+          },
+          {
+            "id": "boissons-boissons-chaudes-americano",
+            "name": "Americano",
+            "note": "",
+            "price": 18
+          },
+          {
+            "id": "boissons-boissons-chaudes-cafe-latte",
+            "name": "Café Latte",
+            "note": "",
+            "price": 16
+          },
+          {
+            "id": "boissons-boissons-chaudes-cappuccino",
+            "name": "Cappuccino",
+            "note": "",
+            "price": 18
+          },
+          {
+            "id": "boissons-boissons-chaudes-cappuccino-viennois",
+            "name": "Cappuccino Viennois",
+            "note": "",
+            "price": 25
+          },
+          {
+            "id": "boissons-boissons-chaudes-chocolat-a-l-ancienne",
+            "name": "Chocolat à l'ancienne",
+            "note": "",
+            "price": 30
+          },
+          {
+            "id": "boissons-boissons-chaudes-the-marocain",
+            "name": "Thé Marocain",
+            "note": "",
+            "price": 16
+          },
+          {
+            "id": "boissons-boissons-chaudes-thes-d-infusion",
+            "name": "Thés d'infusion",
+            "note": "",
+            "price": 25
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "jus-shakes-fraicheur-eaux-softy",
+    "fr": "JUS / SHAKES / FRAÎCHEUR / EAUX + SOFTY",
+    "groups": [
+      {
+        "name": "FRUITS NATURELS PRESSÉS",
+        "note": "",
+        "items": [
+          {
+            "id": "jus-shakes-fraicheur-eaux-softy-fruits-naturels-presses-jus-de-citron",
+            "name": "Jus de Citron",
+            "note": "",
+            "price": 22
+          },
+          {
+            "id": "jus-shakes-fraicheur-eaux-softy-fruits-naturels-presses-jus-d-orange",
+            "name": "Jus d'Orange",
+            "note": "",
+            "price": 22
+          },
+          {
+            "id": "jus-shakes-fraicheur-eaux-softy-fruits-naturels-presses-jus-d-orange-carotte",
+            "name": "Jus d'Orange Carotte",
+            "note": "",
+            "price": 22
+          },
+          {
+            "id": "jus-shakes-fraicheur-eaux-softy-fruits-naturels-presses-jus-de-banane",
+            "name": "Jus de Banane",
+            "note": "",
+            "price": 28
+          },
+          {
+            "id": "jus-shakes-fraicheur-eaux-softy-fruits-naturels-presses-jus-d-avocat",
+            "name": "Jus d'Avocat",
+            "note": "",
+            "price": 35
+          },
+          {
+            "id": "jus-shakes-fraicheur-eaux-softy-fruits-naturels-presses-jus-de-fraise",
+            "name": "Jus de Fraise",
+            "note": "",
+            "price": 35
+          },
+          {
+            "id": "jus-shakes-fraicheur-eaux-softy-fruits-naturels-presses-jus-de-mangue",
+            "name": "Jus de Mangue",
+            "note": "",
+            "price": 38
+          },
+          {
+            "id": "jus-shakes-fraicheur-eaux-softy-fruits-naturels-presses-jus-d-ananas",
+            "name": "Jus d'Ananas",
+            "note": "",
+            "price": 38
+          },
+          {
+            "id": "jus-shakes-fraicheur-eaux-softy-fruits-naturels-presses-jus-de-fruits-de-saison",
+            "name": "Jus de Fruits de Saison",
+            "note": "",
+            "price": 35
+          },
+          {
+            "id": "jus-shakes-fraicheur-eaux-softy-fruits-naturels-presses-jus-de-citron-au-gingembre",
+            "name": "Jus de Citron au Gingembre",
+            "note": "",
+            "price": 28
+          },
+          {
+            "id": "jus-shakes-fraicheur-eaux-softy-fruits-naturels-presses-blue-berry-refresh",
+            "name": "Blue Berry Refresh",
+            "note": "",
+            "price": 28
+          },
+          {
+            "id": "jus-shakes-fraicheur-eaux-softy-fruits-naturels-presses-blue-berry-detox",
+            "name": "Blue Berry Detox",
+            "note": "",
+            "price": 35
+          }
+        ]
+      },
+      {
+        "name": "SHAKES & SMOOTHIES BLUE BERRY",
+        "note": "",
+        "items": [
+          {
+            "id": "jus-shakes-fraicheur-eaux-softy-shakes-smoothies-blue-berry-les-tropiques",
+            "name": "Les tropiques",
+            "note": "",
+            "price": 42
+          },
+          {
+            "id": "jus-shakes-fraicheur-eaux-softy-shakes-smoothies-blue-berry-pina-colada",
+            "name": "Piña Colada",
+            "note": "",
+            "price": 42
+          },
+          {
+            "id": "jus-shakes-fraicheur-eaux-softy-shakes-smoothies-blue-berry-milk-shake",
+            "name": "Milk Shake",
+            "note": "",
+            "price": 42
+          },
+          {
+            "id": "jus-shakes-fraicheur-eaux-softy-shakes-smoothies-blue-berry-exotic-shake",
+            "name": "Exotic Shake",
+            "note": "",
+            "price": 42
+          }
+        ]
+      },
+      {
+        "name": "FRAICHEUR",
+        "note": "",
+        "items": [
+          {
+            "id": "jus-shakes-fraicheur-eaux-softy-fraicheur-ice-tea-peche",
+            "name": "Ice Tea Pêche",
+            "note": "",
+            "price": 28
+          },
+          {
+            "id": "jus-shakes-fraicheur-eaux-softy-fraicheur-sparkling-tea",
+            "name": "Sparkling TEA",
+            "note": "",
+            "price": 33
+          },
+          {
+            "id": "jus-shakes-fraicheur-eaux-softy-fraicheur-mojito",
+            "name": "Mojito",
+            "note": "",
+            "price": 30
+          },
+          {
+            "id": "jus-shakes-fraicheur-eaux-softy-fraicheur-blue-berry-signature",
+            "name": "Blue Berry Signature",
+            "note": "",
+            "price": 33
+          },
+          {
+            "id": "jus-shakes-fraicheur-eaux-softy-fraicheur-pink-lemonade",
+            "name": "Pink lemonade",
+            "note": "",
+            "price": 30
+          }
+        ]
+      },
+      {
+        "name": "EAUX MINÉRALES ET SODAS",
+        "note": "",
+        "items": [
+          {
+            "id": "jus-shakes-fraicheur-eaux-softy-eaux-minerales-et-sodas-ain-soltane-0-5l",
+            "name": "Ain Soltane 0,5L",
+            "note": "",
+            "price": 12
+          },
+          {
+            "id": "jus-shakes-fraicheur-eaux-softy-eaux-minerales-et-sodas-ain-soltane-1-5l",
+            "name": "Ain Soltane 1,5L",
+            "note": "",
+            "price": 18
+          },
+          {
+            "id": "jus-shakes-fraicheur-eaux-softy-eaux-minerales-et-sodas-eau-gazeuse-0-5l",
+            "name": "Eau gazeuse 0,5L",
+            "note": "",
+            "price": 16
+          },
+          {
+            "id": "jus-shakes-fraicheur-eaux-softy-eaux-minerales-et-sodas-eau-gazeuse-1l",
+            "name": "Eau gazeuse 1L",
+            "note": "",
+            "price": 18
+          },
+          {
+            "id": "jus-shakes-fraicheur-eaux-softy-eaux-minerales-et-sodas-soda",
+            "name": "Soda",
+            "note": "",
+            "price": 16
+          }
+        ]
+      },
+      {
+        "name": "SOFTY By Blue Berry",
+        "note": "",
+        "items": [
+          {
+            "id": "jus-shakes-fraicheur-eaux-softy-softy-by-blue-berry-softy-fruits-rouges",
+            "name": "Softy — Fruits Rouges",
+            "note": "",
+            "options": [
+              {
+                "label": "Régulier",
+                "price": 35
+              },
+              {
+                "label": "Grand",
+                "price": 55
+              }
+            ]
+          },
+          {
+            "id": "jus-shakes-fraicheur-eaux-softy-softy-by-blue-berry-softy-cookies-kiss",
+            "name": "Softy — Cookies Kiss",
+            "note": "",
+            "options": [
+              {
+                "label": "Régulier",
+                "price": 35
+              },
+              {
+                "label": "Grand",
+                "price": 55
+              }
+            ]
+          },
+          {
+            "id": "jus-shakes-fraicheur-eaux-softy-softy-by-blue-berry-softy-exotic-dream",
+            "name": "Softy — Exotic Dream",
+            "note": "",
+            "options": [
+              {
+                "label": "Régulier",
+                "price": 35
+              },
+              {
+                "label": "Grand",
+                "price": 55
+              }
+            ]
+          },
+          {
+            "id": "jus-shakes-fraicheur-eaux-softy-softy-by-blue-berry-softy-kinder-bliss",
+            "name": "Softy — Kinder Bliss",
+            "note": "",
+            "options": [
+              {
+                "label": "Régulier",
+                "price": 35
+              },
+              {
+                "label": "Grand",
+                "price": 55
+              }
+            ]
+          },
+          {
+            "id": "jus-shakes-fraicheur-eaux-softy-softy-by-blue-berry-softy-cookie-kiss",
+            "name": "Softy — Cookie Kiss",
+            "note": "",
+            "options": [
+              {
+                "label": "Régulier",
+                "price": 35
+              },
+              {
+                "label": "Grand",
+                "price": 55
+              }
+            ]
+          },
+          {
+            "id": "jus-shakes-fraicheur-eaux-softy-softy-by-blue-berry-softy-candy-boom",
+            "name": "Softy — Candy Boom",
+            "note": "",
+            "options": [
+              {
+                "label": "Régulier",
+                "price": 35
+              },
+              {
+                "label": "Grand",
+                "price": 55
+              }
+            ]
+          },
+          {
+            "id": "jus-shakes-fraicheur-eaux-softy-softy-by-blue-berry-softy-le-dubai",
+            "name": "Softy — Le Dubai",
+            "note": "",
+            "options": [
+              {
+                "label": "Régulier",
+                "price": 35
+              },
+              {
+                "label": "Grand",
+                "price": 55
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "glaces",
+    "fr": "GLACES",
+    "groups": [
+      {
+        "name": "GLACES ET SORBETS",
+        "note": "Flavours are choices with no separate price. Crème glacée: Vanille, Café, Chocolat, Pistache, Caramel, Rhum raisin, Bubblegum, Barbapapa, Noix de coco, Speculoos, Côtelon de Casablancais, Snickers, Cheesecake, Nutella. Sorbets: Fraise, Mangue, Citron, Framboise, Melon, Kaki, Myrtille, Passion, Pêche, Cerise.",
+        "items": [
+          {
+            "id": "glaces-glaces-et-sorbets-une-boule-au-choix",
+            "name": "Une boule au choix",
+            "note": "",
+            "price": 18,
+            "flavours": [
+              "Vanille",
+              "Café",
+              "Chocolat",
+              "Pistache",
+              "Caramel",
+              "Rhum raisin",
+              "Bubblegum",
+              "Barbapapa",
+              "Noix de coco",
+              "Speculoos",
+              "Côtelon de Casablancais",
+              "Snickers",
+              "Cheesecake",
+              "Nutella",
+              "Fraise",
+              "Mangue",
+              "Citron",
+              "Framboise",
+              "Melon",
+              "Kaki",
+              "Myrtille",
+              "Passion",
+              "Pêche",
+              "Cerise"
+            ]
+          },
+          {
+            "id": "glaces-glaces-et-sorbets-deux-boules",
+            "name": "Deux Boules",
+            "note": "",
+            "price": 35,
+            "flavours": [
+              "Vanille",
+              "Café",
+              "Chocolat",
+              "Pistache",
+              "Caramel",
+              "Rhum raisin",
+              "Bubblegum",
+              "Barbapapa",
+              "Noix de coco",
+              "Speculoos",
+              "Côtelon de Casablancais",
+              "Snickers",
+              "Cheesecake",
+              "Nutella",
+              "Fraise",
+              "Mangue",
+              "Citron",
+              "Framboise",
+              "Melon",
+              "Kaki",
+              "Myrtille",
+              "Passion",
+              "Pêche",
+              "Cerise"
+            ]
+          },
+          {
+            "id": "glaces-glaces-et-sorbets-trois-boules",
+            "name": "Trois Boules",
+            "note": "",
+            "price": 49,
+            "flavours": [
+              "Vanille",
+              "Café",
+              "Chocolat",
+              "Pistache",
+              "Caramel",
+              "Rhum raisin",
+              "Bubblegum",
+              "Barbapapa",
+              "Noix de coco",
+              "Speculoos",
+              "Côtelon de Casablancais",
+              "Snickers",
+              "Cheesecake",
+              "Nutella",
+              "Fraise",
+              "Mangue",
+              "Citron",
+              "Framboise",
+              "Melon",
+              "Kaki",
+              "Myrtille",
+              "Passion",
+              "Pêche",
+              "Cerise"
+            ]
+          },
+          {
+            "id": "glaces-glaces-et-sorbets-dubai-chocolate",
+            "name": "DUBAÏ CHOCOLATE",
+            "note": "",
+            "price": 28
+          }
+        ]
+      },
+      {
+        "name": "BÂTONNETS",
+        "note": "",
+        "items": [
+          {
+            "id": "glaces-batonnets-batonnet-chocolat-gold",
+            "name": "Bâtonnet Chocolat Gold",
+            "note": "",
+            "price": 26
+          },
+          {
+            "id": "glaces-batonnets-batonnet-oreo-madness",
+            "name": "Bâtonnet Oreo Madness",
+            "note": "",
+            "price": 26
+          },
+          {
+            "id": "glaces-batonnets-batonnet-blue-sky",
+            "name": "Bâtonnet Blue Sky",
+            "note": "",
+            "price": 26
+          },
+          {
+            "id": "glaces-batonnets-batonnet-bubble-gum",
+            "name": "Bâtonnet Bubble-Gum",
+            "note": "",
+            "price": 26
+          },
+          {
+            "id": "glaces-batonnets-batonnet-nougat",
+            "name": "Bâtonnet Nougat",
+            "note": "",
+            "price": 26
+          },
+          {
+            "id": "glaces-batonnets-batonnet-vanille",
+            "name": "Bâtonnet Vanille",
+            "note": "",
+            "price": 26
+          },
+          {
+            "id": "glaces-batonnets-batonnet-ferrero-rocher",
+            "name": "Bâtonnet Ferrero Rocher",
+            "note": "",
+            "price": 26
+          },
+          {
+            "id": "glaces-batonnets-batonnet-matcha-love",
+            "name": "Bâtonnet Matcha Love",
+            "note": "",
+            "price": 26
+          }
+        ]
+      },
+      {
+        "name": "COUPES COMPOSÉES",
+        "note": "",
+        "items": [
+          {
+            "id": "glaces-coupes-composees-bb-junior",
+            "name": "BB Junior",
+            "note": "",
+            "price": 39
+          },
+          {
+            "id": "glaces-coupes-composees-fraise-melba",
+            "name": "Fraise Melba",
+            "note": "",
+            "price": 55
+          },
+          {
+            "id": "glaces-coupes-composees-yogen-blues",
+            "name": "Yogen Blues",
+            "note": "",
+            "price": 55
+          },
+          {
+            "id": "glaces-coupes-composees-banana-split-by-blue-berry",
+            "name": "Banana Split By Blue Berry",
+            "note": "",
+            "price": 62
+          },
+          {
+            "id": "glaces-coupes-composees-fringale",
+            "name": "Fringale",
+            "note": "",
+            "price": 72
+          },
+          {
+            "id": "glaces-coupes-composees-fats-domino",
+            "name": "Fats Domino",
+            "note": "",
+            "price": 89
+          },
+          {
+            "id": "glaces-coupes-composees-les-amours",
+            "name": "Les Amours",
+            "note": "",
+            "price": 105
+          },
+          {
+            "id": "glaces-coupes-composees-creme-chantilly",
+            "name": "Crème chantilly",
+            "note": "",
+            "price": 5
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "patisserie-et-desserts",
+    "fr": "PÂTISSERIE ET DESSERTS",
+    "groups": [
+      {
+        "name": "Nouveautés",
+        "note": "",
+        "items": [
+          {
+            "id": "patisserie-et-desserts-nouveautes-double-chocolate-cookie",
+            "name": "Double Chocolate Cookie",
+            "note": "",
+            "price": 24
+          },
+          {
+            "id": "patisserie-et-desserts-nouveautes-pecan-cookie",
+            "name": "Pecan Cookie",
+            "note": "",
+            "price": 32
+          },
+          {
+            "id": "patisserie-et-desserts-nouveautes-pistachio-cream-cookie",
+            "name": "Pistachio Cream Cookie",
+            "note": "",
+            "price": 32
+          }
+        ]
+      },
+      {
+        "name": "Nos pâtisseries",
+        "note": "",
+        "items": [
+          {
+            "id": "patisserie-et-desserts-nos-patisseries-cake-aux-fruits-secs",
+            "name": "Cake aux Fruits Secs",
+            "note": "",
+            "price": 20
+          },
+          {
+            "id": "patisserie-et-desserts-nos-patisseries-mille-feuilles-praline",
+            "name": "Mille Feuilles Praliné",
+            "note": "",
+            "price": 26
+          },
+          {
+            "id": "patisserie-et-desserts-nos-patisseries-tiramisu",
+            "name": "Tiramisu",
+            "note": "",
+            "price": 28
+          },
+          {
+            "id": "patisserie-et-desserts-nos-patisseries-tarte-crumble-aux-pommes",
+            "name": "Tarte Crumble Aux Pommes",
+            "note": "",
+            "price": 28
+          },
+          {
+            "id": "patisserie-et-desserts-nos-patisseries-fraisier",
+            "name": "Fraisier",
+            "note": "",
+            "price": 28
+          },
+          {
+            "id": "patisserie-et-desserts-nos-patisseries-cheesecake",
+            "name": "Cheesecake",
+            "note": "",
+            "price": 28
+          },
+          {
+            "id": "patisserie-et-desserts-nos-patisseries-tarte-au-citron-meringuee",
+            "name": "Tarte au Citron Meringuée",
+            "note": "",
+            "price": 28
+          },
+          {
+            "id": "patisserie-et-desserts-nos-patisseries-brownie",
+            "name": "Brownie",
+            "note": "",
+            "price": 28
+          },
+          {
+            "id": "patisserie-et-desserts-nos-patisseries-royale-chocolat",
+            "name": "Royale Chocolat",
+            "note": "",
+            "price": 32
+          },
+          {
+            "id": "patisserie-et-desserts-nos-patisseries-cheesecake-new-yorkais-aux-fruits-rouges",
+            "name": "Cheesecake New Yorkais Aux Fruits Rouges",
+            "note": "",
+            "price": 42
+          },
+          {
+            "id": "patisserie-et-desserts-nos-patisseries-souffle-au-citron",
+            "name": "Soufflé au Citron",
+            "note": "",
+            "price": 42
+          },
+          {
+            "id": "patisserie-et-desserts-nos-patisseries-gateau-americain-chocolat-noir-aux-noisettes-et-praline-d-amande",
+            "name": "Gâteau Américain Chocolat Noir Aux noisettes et praliné d'amande",
+            "note": "",
+            "price": 42
+          },
+          {
+            "id": "patisserie-et-desserts-nos-patisseries-gateau-americain-red-velvet-cake",
+            "name": "Gâteau Americain Red Velvet Cake",
+            "note": "",
+            "price": 42
+          },
+          {
+            "id": "patisserie-et-desserts-nos-patisseries-gateau-americain-mascarpone-citron",
+            "name": "Gâteau Américain Mascarpone Citron",
+            "note": "",
+            "price": 48
+          },
+          {
+            "id": "patisserie-et-desserts-nos-patisseries-celeste-pistache-framboises",
+            "name": "Céleste Pistache Framboises",
+            "note": "",
+            "price": 48
+          }
+        ]
+      },
+      {
+        "name": "DESSERTS",
+        "note": "",
+        "items": [
+          {
+            "id": "patisserie-et-desserts-desserts-m-halabia",
+            "name": "M'halabia",
+            "note": "",
+            "price": 15
+          },
+          {
+            "id": "patisserie-et-desserts-desserts-creme-caramel",
+            "name": "Crème Caramel",
+            "note": "",
+            "price": 16
+          },
+          {
+            "id": "patisserie-et-desserts-desserts-fruit-bowl",
+            "name": "Fruit Bowl",
+            "note": "",
+            "price": 38
+          },
+          {
+            "id": "patisserie-et-desserts-desserts-cookie-pan",
+            "name": "Cookie Pan",
+            "note": "",
+            "price": 48
+          },
+          {
+            "id": "patisserie-et-desserts-desserts-molten-mama",
+            "name": "Molten Mama",
+            "note": "",
+            "price": 52
+          },
+          {
+            "id": "patisserie-et-desserts-desserts-molten-matcha",
+            "name": "Molten Matcha",
+            "note": "",
+            "price": 62
+          },
+          {
+            "id": "patisserie-et-desserts-desserts-kunefe-pan",
+            "name": "Kunefe Pan",
+            "note": "",
+            "price": 75
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "crepes",
+    "fr": "CRÊPES",
+    "groups": [
+      {
+        "name": "Douceur",
+        "note": "",
+        "items": [
+          {
+            "id": "crepes-douceur-crepe-suzette",
+            "name": "Crêpe Suzette",
+            "note": "",
+            "price": 22
+          },
+          {
+            "id": "crepes-douceur-crepe-la-fameuse",
+            "name": "Crêpe La fameuse",
+            "note": "",
+            "price": 32
+          },
+          {
+            "id": "crepes-douceur-crepe-berbere",
+            "name": "Crêpe Berbère",
+            "note": "",
+            "price": 34
+          },
+          {
+            "id": "crepes-douceur-crepe-meme",
+            "name": "Crêpe-même",
+            "note": "",
+            "price": 32
+          },
+          {
+            "id": "crepes-douceur-crepe-banana",
+            "name": "Crêpe Banana",
+            "note": "",
+            "price": 38
+          },
+          {
+            "id": "crepes-douceur-crepe-soleil",
+            "name": "Crêpe Soleil",
+            "note": "",
+            "price": 42
+          },
+          {
+            "id": "crepes-douceur-crepe-fringale",
+            "name": "Crêpe Fringale",
+            "note": "",
+            "price": 42
+          },
+          {
+            "id": "crepes-douceur-crepe-dubai-chocolate-bar",
+            "name": "Crêpe Dubai chocolate bar",
+            "note": "",
+            "price": 68
+          }
+        ]
+      },
+      {
+        "name": "Salées",
+        "note": "",
+        "items": [
+          {
+            "id": "crepes-salees-crepe-au-fromage",
+            "name": "Crêpe au fromage",
+            "note": "",
+            "price": 32
+          },
+          {
+            "id": "crepes-salees-crepe-paysanne",
+            "name": "Crêpe Paysanne",
+            "note": "",
+            "price": 34
+          },
+          {
+            "id": "crepes-salees-crepe-charcutiere",
+            "name": "Crêpe Charcutière",
+            "note": "",
+            "price": 42
+          },
+          {
+            "id": "crepes-salees-crepe-fermiere",
+            "name": "Crêpe Fermière",
+            "note": "",
+            "price": 42
+          },
+          {
+            "id": "crepes-salees-crepe-forestiere",
+            "name": "Crêpe Forestière",
+            "note": "",
+            "price": 42
+          },
+          {
+            "id": "crepes-salees-crepe-lasagna",
+            "name": "Crêpe Lasagna",
+            "note": "",
+            "price": 42
+          },
+          {
+            "id": "crepes-salees-crepe-poulet-aux-champignons",
+            "name": "Crêpe Poulet aux champignons",
+            "note": "",
+            "price": 42
+          },
+          {
+            "id": "crepes-salees-crepe-pil-pil",
+            "name": "Crêpe Pil-pil",
+            "note": "",
+            "price": 52
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "petit-dejeuner-et-brunch",
+    "fr": "PETIT-DÉJEUNER ET BRUNCH",
+    "groups": [
+      {
+        "name": "",
+        "note": "",
+        "items": [
+          {
+            "id": "petit-dejeuner-et-brunch-general-petit-dejeuner-continental",
+            "name": "Petit-déjeuner Continental",
+            "note": "",
+            "price": 40
+          },
+          {
+            "id": "petit-dejeuner-et-brunch-general-petit-dejeuner-beldi",
+            "name": "Petit-déjeuner Beldi",
+            "note": "",
+            "price": 50
+          },
+          {
+            "id": "petit-dejeuner-et-brunch-general-petit-dejeuner-m-dini",
+            "name": "Petit-déjeuner M'dini",
+            "note": "",
+            "price": 56
+          },
+          {
+            "id": "petit-dejeuner-et-brunch-general-ftour-l-ouaid",
+            "name": "Ftour l'Ouaid",
+            "note": "",
+            "price": 75
+          },
+          {
+            "id": "petit-dejeuner-et-brunch-general-american-breakfast",
+            "name": "American Breakfast",
+            "note": "",
+            "price": 68
+          },
+          {
+            "id": "petit-dejeuner-et-brunch-general-petit-dejeuner-vitamine",
+            "name": "Petit-déjeuner Vitamine",
+            "note": "",
+            "price": 64
+          },
+          {
+            "id": "petit-dejeuner-et-brunch-general-petit-dejeuner-sante",
+            "name": "Petit-déjeuner santé",
+            "note": "",
+            "price": 58
+          },
+          {
+            "id": "petit-dejeuner-et-brunch-general-petit-dejeuner-campagnard",
+            "name": "Petit-déjeuner Campagnard",
+            "note": "",
+            "price": 48
+          },
+          {
+            "id": "petit-dejeuner-et-brunch-general-avocado-toast",
+            "name": "Avocado Toast",
+            "note": "",
+            "price": 38
+          },
+          {
+            "id": "petit-dejeuner-et-brunch-general-viennoiserie",
+            "name": "Viennoiserie",
+            "note": "",
+            "price": 10
+          },
+          {
+            "id": "petit-dejeuner-et-brunch-general-omelette-nature",
+            "name": "Omelette nature",
+            "note": "",
+            "price": 18
+          },
+          {
+            "id": "petit-dejeuner-et-brunch-general-rghayef-ou-harcha-2-pieces",
+            "name": "Rghayef ou Harcha (2 pièces)",
+            "note": "",
+            "price": 16
+          },
+          {
+            "id": "petit-dejeuner-et-brunch-general-tajine-khlie",
+            "name": "Tajine Khlie",
+            "note": "",
+            "price": 35
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "menu-enfants-anniversaires-sharing-box",
+    "fr": "MENU ENFANTS / ANNIVERSAIRES / SHARING BOX",
+    "groups": [
+      {
+        "name": "MENU ENFANTS",
+        "note": "52 DH each option.",
+        "items": [
+          {
+            "id": "menu-enfants-anniversaires-sharing-box-menu-enfants-menu-enfants-option-1-cheeseburger-frites",
+            "name": "Menu Enfants — Option 1: Cheeseburger + frites",
+            "note": "",
+            "price": 52
+          },
+          {
+            "id": "menu-enfants-anniversaires-sharing-box-menu-enfants-menu-enfants-option-2-pizza-pepperoni-ou-sicilienne-ou-la-mamma",
+            "name": "Menu Enfants — Option 2: Pizza Pepperoni ou Sicilienne ou La Mamma",
+            "note": "",
+            "price": 52
+          },
+          {
+            "id": "menu-enfants-anniversaires-sharing-box-menu-enfants-menu-enfants-option-3-penne-di-pollo-ou-spaghetti-bolognaise",
+            "name": "Menu Enfants — Option 3: Penne di Pollo ou Spaghetti Bolognaise",
+            "note": "",
+            "price": 52
+          },
+          {
+            "id": "menu-enfants-anniversaires-sharing-box-menu-enfants-menu-enfants-option-4-crispy-fried-chicken",
+            "name": "Menu Enfants — Option 4: Crispy Fried Chicken",
+            "note": "",
+            "price": 52
+          },
+          {
+            "id": "menu-enfants-anniversaires-sharing-box-menu-enfants-menu-enfants-option-5-chicken-burger-frite-nouveautes",
+            "name": "Menu Enfants — Option 5: Chicken burger + frite (Nouveautés)",
+            "note": "",
+            "price": 52
+          }
+        ]
+      },
+      {
+        "name": "ANNIVERSAIRES — Buffet Sucré",
+        "note": "",
+        "items": [
+          {
+            "id": "menu-enfants-anniversaires-sharing-box-anniversaires-buffet-sucre-gateau-d-anniversaire-personnalise",
+            "name": "Gâteau d'anniversaire personnalisé",
+            "note": "Dh/Kg",
+            "price": 250
+          },
+          {
+            "id": "menu-enfants-anniversaires-sharing-box-anniversaires-buffet-sucre-cupcakes",
+            "name": "Cupcakes",
+            "note": "Dh/Pièce",
+            "price": 18
+          },
+          {
+            "id": "menu-enfants-anniversaires-sharing-box-anniversaires-buffet-sucre-popcakes",
+            "name": "Popcakes",
+            "note": "Dh/Pièce",
+            "price": 8
+          },
+          {
+            "id": "menu-enfants-anniversaires-sharing-box-anniversaires-buffet-sucre-gateaux-soiree-blue-berry",
+            "name": "Gâteaux soirée Blue Berry",
+            "note": "Dh/Pièce",
+            "price": 8
+          },
+          {
+            "id": "menu-enfants-anniversaires-sharing-box-anniversaires-buffet-sucre-popcorn-blue-sky",
+            "name": "Popcorn Blue Sky",
+            "note": "Dh/Pièce",
+            "price": 8
+          },
+          {
+            "id": "menu-enfants-anniversaires-sharing-box-anniversaires-buffet-sucre-popcorn-bubble-gum",
+            "name": "Popcorn Bubble-Gum",
+            "note": "Dh/Pièce",
+            "price": 8
+          }
+        ]
+      },
+      {
+        "name": "Sharing Box",
+        "note": "",
+        "items": [
+          {
+            "id": "menu-enfants-anniversaires-sharing-box-sharing-box-sharing-box-crispy",
+            "name": "Sharing Box Crispy",
+            "note": "",
+            "price": 212
+          },
+          {
+            "id": "menu-enfants-anniversaires-sharing-box-sharing-box-sharing-box-chaussons-fromages",
+            "name": "Sharing Box chaussons fromages",
+            "note": "",
+            "price": 160
+          },
+          {
+            "id": "menu-enfants-anniversaires-sharing-box-sharing-box-sharing-box-shawarmas",
+            "name": "Sharing Box Shawarmas",
+            "note": "",
+            "price": 185
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "salades",
+    "fr": "SALADES",
+    "groups": [
+      {
+        "name": "NOS SALADES",
+        "note": "",
+        "items": [
+          {
+            "id": "salades-nos-salades-salade-variee",
+            "name": "Salade variée",
+            "note": "",
+            "price": 39
+          },
+          {
+            "id": "salades-nos-salades-salade-cesar",
+            "name": "Salade césar",
+            "note": "",
+            "price": 42
+          },
+          {
+            "id": "salades-nos-salades-salade-fromage-et-crudites",
+            "name": "Salade fromage et crudités",
+            "note": "",
+            "price": 48
+          },
+          {
+            "id": "salades-nos-salades-salade-caprese",
+            "name": "Salade caprese",
+            "note": "",
+            "price": 58
+          },
+          {
+            "id": "salades-nos-salades-salade-tamuziga",
+            "name": "Salade Tamuziga",
+            "note": "",
+            "price": 56
+          },
+          {
+            "id": "salades-nos-salades-salade-d-avocat-aux-crevettes",
+            "name": "Salade d'avocat aux crevettes",
+            "note": "",
+            "price": 48
+          },
+          {
+            "id": "salades-nos-salades-salade-quinoa",
+            "name": "Salade Quinoa",
+            "note": "",
+            "price": 58
+          },
+          {
+            "id": "salades-nos-salades-salade-blue-berry",
+            "name": "Salade blue berry",
+            "note": "",
+            "price": 58
+          },
+          {
+            "id": "salades-nos-salades-assiette-de-l-air-marin",
+            "name": "Assiette de l'Air marin",
+            "note": "",
+            "price": 59
+          },
+          {
+            "id": "salades-nos-salades-salade-nicoise",
+            "name": "Salade Niçoise",
+            "note": "",
+            "price": 48
+          },
+          {
+            "id": "salades-nos-salades-salade-burrata",
+            "name": "Salade Burrata",
+            "note": "",
+            "price": 98
+          }
+        ]
+      },
+      {
+        "name": "SALADE BAR",
+        "note": "Bases, légumes, fromages et protéines are listed as choices with codes 50-97, not prices.",
+        "items": [
+          {
+            "id": "salades-salade-bar-composez-votre-salade",
+            "name": "Composez votre salade",
+            "note": "",
+            "price": 58
+          },
+          {
+            "id": "salades-salade-bar-supplement-legumes-et-petits-plus",
+            "name": "Supplément légumes et petits plus",
+            "note": "",
+            "price": 8
+          },
+          {
+            "id": "salades-salade-bar-petits-plus-premium",
+            "name": "Petits plus Premium",
+            "note": "",
+            "price": 12
+          },
+          {
+            "id": "salades-salade-bar-supplement-proteine-et-fromage",
+            "name": "Supplément protéine et fromage",
+            "note": "",
+            "price": 17
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "burgers-entrees-chaudes",
+    "fr": "BURGERS + ENTRÉES CHAUDES",
+    "groups": [
+      {
+        "name": "Burgers",
+        "note": "",
+        "items": [
+          {
+            "id": "burgers-entrees-chaudes-burgers-chicken-burger",
+            "name": "Chicken Burger",
+            "note": "",
+            "options": [
+              {
+                "label": "Sandwich",
+                "price": 48
+              },
+              {
+                "label": "Menu",
+                "price": 68
+              }
+            ]
+          },
+          {
+            "id": "burgers-entrees-chaudes-burgers-cheeseburger",
+            "name": "Cheeseburger",
+            "note": "",
+            "options": [
+              {
+                "label": "Sandwich",
+                "price": 58
+              },
+              {
+                "label": "Menu",
+                "price": 78
+              }
+            ]
+          },
+          {
+            "id": "burgers-entrees-chaudes-burgers-double-cheeseburger",
+            "name": "Double Cheeseburger",
+            "note": "",
+            "options": [
+              {
+                "label": "Sandwich",
+                "price": 80
+              },
+              {
+                "label": "Menu",
+                "price": 98
+              }
+            ]
+          },
+          {
+            "id": "burgers-entrees-chaudes-burgers-pomme-frites",
+            "name": "Pomme frites",
+            "note": "",
+            "price": 15
+          }
+        ]
+      },
+      {
+        "name": "ENTRÉES CHAUDES",
+        "note": "",
+        "items": [
+          {
+            "id": "burgers-entrees-chaudes-entrees-chaudes-crevettes-pil-pil",
+            "name": "Crevettes Pil Pil",
+            "note": "",
+            "price": 48
+          },
+          {
+            "id": "burgers-entrees-chaudes-entrees-chaudes-soupe-de-poisson",
+            "name": "Soupe de Poisson",
+            "note": "",
+            "price": 48
+          },
+          {
+            "id": "burgers-entrees-chaudes-entrees-chaudes-bouchees-champignon-truffe",
+            "name": "Bouchées Champignon Truffe",
+            "note": "",
+            "price": 64
+          },
+          {
+            "id": "burgers-entrees-chaudes-entrees-chaudes-crispy-shrimp",
+            "name": "Crispy Shrimp",
+            "note": "",
+            "price": 85
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "cuisine-mediterraneenne",
+    "fr": "CUISINE MÉDITERRANÉENNE",
+    "groups": [
+      {
+        "name": "FRITURES DE POISSONS",
+        "note": "",
+        "items": [
+          {
+            "id": "cuisine-mediterraneenne-fritures-de-poissons-friture-de-merlan",
+            "name": "Friture de Merlan",
+            "note": "",
+            "price": 74
+          },
+          {
+            "id": "cuisine-mediterraneenne-fritures-de-poissons-friture-de-calamar",
+            "name": "Friture de Calamar",
+            "note": "",
+            "price": 110
+          },
+          {
+            "id": "cuisine-mediterraneenne-fritures-de-poissons-friture-de-sole",
+            "name": "Friture de Sole",
+            "note": "",
+            "price": 78
+          },
+          {
+            "id": "cuisine-mediterraneenne-fritures-de-poissons-friture-mixte-de-poissons",
+            "name": "Friture Mixte de Poissons",
+            "note": "",
+            "price": 110
+          }
+        ]
+      },
+      {
+        "name": "LA PLANCHA",
+        "note": "",
+        "items": [
+          {
+            "id": "cuisine-mediterraneenne-la-plancha-gambas-grilles",
+            "name": "Gambas grillés",
+            "note": "",
+            "price": 90
+          },
+          {
+            "id": "cuisine-mediterraneenne-la-plancha-calamars-grilles",
+            "name": "Calamars grillés",
+            "note": "",
+            "price": 110
+          },
+          {
+            "id": "cuisine-mediterraneenne-la-plancha-darne-de-saumon",
+            "name": "Darne de Saumon",
+            "note": "",
+            "price": 125
+          },
+          {
+            "id": "cuisine-mediterraneenne-la-plancha-daurade-300g-a-400g",
+            "name": "Daurade (300g à 400g)",
+            "note": "",
+            "price": 120
+          },
+          {
+            "id": "cuisine-mediterraneenne-la-plancha-daurade-500g-a-600g",
+            "name": "Daurade (500g à 600g)",
+            "note": "",
+            "price": 168
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "cuisine-mediterraneenne-filets-specialites-du-chef",
+    "fr": "CUISINE MÉDITERRANÉENNE — FILETS / SPÉCIALITÉS DU CHEF",
+    "groups": [
+      {
+        "name": "FILETS DE POISSON",
+        "note": "",
+        "items": [
+          {
+            "id": "cuisine-mediterraneenne-filets-specialites-du-chef-filets-de-poisson-filet-d-espadon-180g",
+            "name": "Filet d'Espadon (180g)",
+            "note": "",
+            "price": 95
+          },
+          {
+            "id": "cuisine-mediterraneenne-filets-specialites-du-chef-filets-de-poisson-filet-de-daurade-180g",
+            "name": "Filet de daurade (180g)",
+            "note": "",
+            "price": 138
+          },
+          {
+            "id": "cuisine-mediterraneenne-filets-specialites-du-chef-filets-de-poisson-filet-de-saint-pierre-180g",
+            "name": "Filet de Saint-Pierre (180g)",
+            "note": "",
+            "price": 148
+          },
+          {
+            "id": "cuisine-mediterraneenne-filets-specialites-du-chef-filets-de-poisson-filet-d-ombrine-200g",
+            "name": "Filet d'ombrine (200g)",
+            "note": "",
+            "price": 120
+          }
+        ]
+      },
+      {
+        "name": "SPÉCIALITÉS DU CHEF",
+        "note": "",
+        "items": [
+          {
+            "id": "cuisine-mediterraneenne-filets-specialites-du-chef-specialites-du-chef-brochettes-de-saumon-et-de-chevre",
+            "name": "Brochettes de Saumon et de Chèvre",
+            "note": "",
+            "price": 115
+          },
+          {
+            "id": "cuisine-mediterraneenne-filets-specialites-du-chef-specialites-du-chef-sole-mediterraneenne-en-papillotte",
+            "name": "Sole méditerranéenne en papillotte",
+            "note": "",
+            "price": 120
+          },
+          {
+            "id": "cuisine-mediterraneenne-filets-specialites-du-chef-specialites-du-chef-paella",
+            "name": "Paëlla",
+            "note": "",
+            "price": 88
+          },
+          {
+            "id": "cuisine-mediterraneenne-filets-specialites-du-chef-specialites-du-chef-emince-de-filet-de-buf-cremeux-aux-champignons-frais",
+            "name": "Emincé de filet de Bœuf Crémeux aux champignons frais",
+            "note": "",
+            "price": 140
+          },
+          {
+            "id": "cuisine-mediterraneenne-filets-specialites-du-chef-specialites-du-chef-filet-de-boeuf",
+            "name": "Filet de Boeuf",
+            "note": "",
+            "price": 140
+          },
+          {
+            "id": "cuisine-mediterraneenne-filets-specialites-du-chef-specialites-du-chef-cordon-bleu",
+            "name": "Cordon Bleu",
+            "note": "",
+            "price": 74
+          },
+          {
+            "id": "cuisine-mediterraneenne-filets-specialites-du-chef-specialites-du-chef-blanquette-de-poissons",
+            "name": "Blanquette de poissons",
+            "note": "",
+            "price": 120
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "cuisine-italienne",
+    "fr": "CUISINE ITALIENNE",
+    "groups": [
+      {
+        "name": "PASTA",
+        "note": "",
+        "items": [
+          {
+            "id": "cuisine-italienne-pasta-penne-all-arrabbiata",
+            "name": "Penne all'arrabbiata",
+            "note": "",
+            "price": 48
+          },
+          {
+            "id": "cuisine-italienne-pasta-penne-di-pollo",
+            "name": "Penne di Pollo",
+            "note": "",
+            "price": 68
+          },
+          {
+            "id": "cuisine-italienne-pasta-penne-jalapenos",
+            "name": "Penne Jalapeños",
+            "note": "",
+            "price": 78
+          },
+          {
+            "id": "cuisine-italienne-pasta-spaghetti-bolognaise",
+            "name": "Spaghetti Bolognaise",
+            "note": "",
+            "price": 72
+          },
+          {
+            "id": "cuisine-italienne-pasta-spaghetti-aux-fruits-de-mer",
+            "name": "Spaghetti aux Fruits de Mer",
+            "note": "",
+            "price": 88
+          },
+          {
+            "id": "cuisine-italienne-pasta-tagliatelle-carbonara",
+            "name": "Tagliatelle Carbonara",
+            "note": "",
+            "price": 62
+          },
+          {
+            "id": "cuisine-italienne-pasta-tagliatelle-au-saumon-fume",
+            "name": "Tagliatelle au Saumon Fumé",
+            "note": "",
+            "price": 78
+          },
+          {
+            "id": "cuisine-italienne-pasta-raviolis-a-la-truffe",
+            "name": "Raviolis à la Truffe",
+            "note": "",
+            "price": 74
+          },
+          {
+            "id": "cuisine-italienne-pasta-raviolis-au-saumon",
+            "name": "Raviolis au Saumon",
+            "note": "",
+            "price": 74
+          },
+          {
+            "id": "cuisine-italienne-pasta-raviolis-quattro-fromaggi",
+            "name": "Raviolis Quattro Fromaggi",
+            "note": "",
+            "price": 74
+          },
+          {
+            "id": "cuisine-italienne-pasta-risotto-aux-fruits-de-mer",
+            "name": "Risotto aux Fruits de Mer",
+            "note": "",
+            "price": 95
+          },
+          {
+            "id": "cuisine-italienne-pasta-linguine-aux-crevettes-tigrees-croute-signature",
+            "name": "Linguine aux crevettes tigrées, croûte signature",
+            "note": "",
+            "price": 125
+          }
+        ]
+      },
+      {
+        "name": "PIZZA",
+        "note": "",
+        "items": [
+          {
+            "id": "cuisine-italienne-pizza-margarita",
+            "name": "Margarita",
+            "note": "",
+            "price": 52
+          },
+          {
+            "id": "cuisine-italienne-pizza-spicy-tuna",
+            "name": "Spicy Tuna",
+            "note": "",
+            "price": 59
+          },
+          {
+            "id": "cuisine-italienne-pizza-la-mamma",
+            "name": "La Mamma",
+            "note": "",
+            "price": 66
+          },
+          {
+            "id": "cuisine-italienne-pizza-pepperoni",
+            "name": "Pepperoni",
+            "note": "",
+            "price": 68
+          },
+          {
+            "id": "cuisine-italienne-pizza-quatre-saison",
+            "name": "Quatre Saison",
+            "note": "",
+            "price": 68
+          },
+          {
+            "id": "cuisine-italienne-pizza-quattro-fromaggi",
+            "name": "Quattro Fromaggi",
+            "note": "",
+            "price": 69
+          },
+          {
+            "id": "cuisine-italienne-pizza-stracciatella-verde",
+            "name": "Stracciatella Verde",
+            "note": "",
+            "price": 69
+          },
+          {
+            "id": "cuisine-italienne-pizza-frutti-di-mare",
+            "name": "Frutti di Mare",
+            "note": "",
+            "price": 78
+          },
+          {
+            "id": "cuisine-italienne-pizza-spicy-gambas",
+            "name": "Spicy Gambas",
+            "note": "",
+            "price": 78
+          },
+          {
+            "id": "cuisine-italienne-pizza-stracciatella-toscana",
+            "name": "Stracciatella Toscana",
+            "note": "",
+            "price": 75
+          },
+          {
+            "id": "cuisine-italienne-pizza-burrata",
+            "name": "Burrata",
+            "note": "",
+            "price": 105
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "cuisine-orientale",
+    "fr": "CUISINE ORIENTALE",
+    "groups": [
+      {
+        "name": "PLATS / ENTRÉES",
+        "note": "",
+        "items": [
+          {
+            "id": "cuisine-orientale-plats-entrees-falafel-3-pcs",
+            "name": "Falafel (3 pcs)",
+            "note": "",
+            "price": 20
+          },
+          {
+            "id": "cuisine-orientale-plats-entrees-kebba-3",
+            "name": "Kebba (3)",
+            "note": "",
+            "price": 38
+          },
+          {
+            "id": "cuisine-orientale-plats-entrees-sambousk-fromage-3",
+            "name": "Sambousk fromage (3)",
+            "note": "",
+            "price": 28
+          },
+          {
+            "id": "cuisine-orientale-plats-entrees-sambousk-viande-hachee-3",
+            "name": "Sambousk viande hachée (3)",
+            "note": "",
+            "price": 28
+          },
+          {
+            "id": "cuisine-orientale-plats-entrees-hommos",
+            "name": "Hommos",
+            "note": "",
+            "price": 30
+          },
+          {
+            "id": "cuisine-orientale-plats-entrees-taboule",
+            "name": "Taboulé",
+            "note": "",
+            "price": 30
+          },
+          {
+            "id": "cuisine-orientale-plats-entrees-moutabal",
+            "name": "Moutabal",
+            "note": "",
+            "price": 30
+          },
+          {
+            "id": "cuisine-orientale-plats-entrees-muhammara",
+            "name": "Muhammara",
+            "note": "",
+            "price": 32
+          },
+          {
+            "id": "cuisine-orientale-plats-entrees-mezze-1",
+            "name": "Mezze 1",
+            "note": "",
+            "price": 48
+          },
+          {
+            "id": "cuisine-orientale-plats-entrees-mezze-2",
+            "name": "Mezze 2",
+            "note": "",
+            "price": 48
+          },
+          {
+            "id": "cuisine-orientale-plats-entrees-max-mezze-2",
+            "name": "Max Mezze 2",
+            "note": "",
+            "price": 90
+          }
+        ]
+      },
+      {
+        "name": "PLATS SHAWARMAS",
+        "note": "",
+        "items": [
+          {
+            "id": "cuisine-orientale-plats-shawarmas-shawarma-poulet-plat",
+            "name": "Shawarma Poulet (plat)",
+            "note": "",
+            "price": 58
+          },
+          {
+            "id": "cuisine-orientale-plats-shawarmas-shawarma-boeuf-ou-mixte-plat",
+            "name": "Shawarma Boeuf ou mixte (plat)",
+            "note": "",
+            "price": 88
+          },
+          {
+            "id": "cuisine-orientale-plats-shawarmas-shawarma-hommos-poulet",
+            "name": "Shawarma hommos poulet",
+            "note": "",
+            "price": 69
+          }
+        ]
+      },
+      {
+        "name": "SHAWARMAS ET SANDWICHS",
+        "note": "",
+        "items": [
+          {
+            "id": "cuisine-orientale-shawarmas-et-sandwichs-falafel-en-sandwich",
+            "name": "Falafel en sandwich",
+            "note": "",
+            "price": 24
+          },
+          {
+            "id": "cuisine-orientale-shawarmas-et-sandwichs-shawarma-poulet-au-raghif",
+            "name": "Shawarma poulet Au Raghif",
+            "note": "",
+            "price": 35
+          },
+          {
+            "id": "cuisine-orientale-shawarmas-et-sandwichs-shawarma-boeuf-ou-mixte-au-raghif",
+            "name": "Shawarma boeuf ou mixte Au Raghif",
+            "note": "",
+            "price": 48
+          },
+          {
+            "id": "cuisine-orientale-shawarmas-et-sandwichs-pomme-frites",
+            "name": "Pomme frites",
+            "note": "",
+            "price": 15
+          },
+          {
+            "id": "cuisine-orientale-shawarmas-et-sandwichs-orient-1",
+            "name": "Orient 1",
+            "note": "",
+            "price": 58
+          },
+          {
+            "id": "cuisine-orientale-shawarmas-et-sandwichs-orient-2",
+            "name": "Orient 2",
+            "note": "",
+            "price": 60
+          },
+          {
+            "id": "cuisine-orientale-shawarmas-et-sandwichs-orient-3",
+            "name": "Orient 3",
+            "note": "",
+            "price": 60
+          },
+          {
+            "id": "cuisine-orientale-shawarmas-et-sandwichs-orient-4",
+            "name": "Orient 4",
+            "note": "",
+            "price": 78
+          }
+        ]
+      },
+      {
+        "name": "BLUE BERRY FRESH BOWL",
+        "note": "",
+        "items": [
+          {
+            "id": "cuisine-orientale-blue-berry-fresh-bowl-fresh-bowl-1",
+            "name": "Fresh Bowl 1",
+            "note": "",
+            "price": 52
+          },
+          {
+            "id": "cuisine-orientale-blue-berry-fresh-bowl-fresh-bowl-2",
+            "name": "Fresh Bowl 2",
+            "note": "",
+            "price": 69
+          },
+          {
+            "id": "cuisine-orientale-blue-berry-fresh-bowl-fresh-bowl-3",
+            "name": "Fresh Bowl 3",
+            "note": "",
+            "price": 62
+          },
+          {
+            "id": "cuisine-orientale-blue-berry-fresh-bowl-fresh-bowl-4",
+            "name": "Fresh Bowl 4",
+            "note": "",
+            "price": 75
+          },
+          {
+            "id": "cuisine-orientale-blue-berry-fresh-bowl-supplement-de-2-pieces-falafel",
+            "name": "Supplément de 2 pièces Falafel",
+            "note": "",
+            "price": 14
+          },
+          {
+            "id": "cuisine-orientale-blue-berry-fresh-bowl-aubergines-grillees",
+            "name": "Aubergines grillées",
+            "note": "",
+            "price": 8
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "le-marocain",
+    "fr": "LE MAROCAIN",
+    "groups": [
+      {
+        "name": "ENTRÉES",
+        "note": "",
+        "items": [
+          {
+            "id": "le-marocain-entrees-zaalouk",
+            "name": "Zaalouk",
+            "note": "",
+            "price": 20
+          },
+          {
+            "id": "le-marocain-entrees-taktouka",
+            "name": "Taktouka",
+            "note": "",
+            "price": 20
+          },
+          {
+            "id": "le-marocain-entrees-felfla-be-maticha",
+            "name": "Felfla Be Maticha",
+            "note": "",
+            "price": 20
+          },
+          {
+            "id": "le-marocain-entrees-bakoula",
+            "name": "Bakoula",
+            "note": "",
+            "price": 20
+          },
+          {
+            "id": "le-marocain-entrees-assortiment-de-trois-salades-marocaines",
+            "name": "Assortiment de trois salades marocaines",
+            "note": "",
+            "price": 45
+          },
+          {
+            "id": "le-marocain-entrees-pastilla-au-poulet-et-amandes-facon-kunafa-2-pieces",
+            "name": "Pastilla au poulet et amandes façon Kunafa (2 pièces)",
+            "note": "",
+            "price": 80
+          },
+          {
+            "id": "le-marocain-entrees-pastilla-aux-fruits-de-mer-2-pieces",
+            "name": "Pastilla aux fruits de mer (2 pièces)",
+            "note": "",
+            "price": 80
+          }
+        ]
+      },
+      {
+        "name": "TAGINES",
+        "note": "",
+        "items": [
+          {
+            "id": "le-marocain-tagines-tagine-de-poulet-m-hammer-aux-olives-et-citrons-confits",
+            "name": "Tagine de poulet M'hammer aux olives et citrons confits",
+            "note": "",
+            "price": 65
+          },
+          {
+            "id": "le-marocain-tagines-poulet-messlalla",
+            "name": "Poulet Messlalla",
+            "note": "",
+            "price": 65
+          },
+          {
+            "id": "le-marocain-tagines-poulet-k-dra-aux-amandes-grillees",
+            "name": "Poulet K'dra aux amandes grillées",
+            "note": "",
+            "price": 65
+          },
+          {
+            "id": "le-marocain-tagines-tagine-de-buf-aux-legumes-de-saisons",
+            "name": "Tagine de Bœuf aux légumes de saisons",
+            "note": "",
+            "price": 78
+          },
+          {
+            "id": "le-marocain-tagines-tagine-de-buf-aux-pruneaux-et-graines-de-sesame",
+            "name": "Tagine de Bœuf aux pruneaux et graines de sésame",
+            "note": "",
+            "price": 78
+          },
+          {
+            "id": "le-marocain-tagines-tagine-souiri-au-poisson-du-jour",
+            "name": "Tagine Souiri au Poisson du Jour",
+            "note": "",
+            "price": 85
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "le-marocain-suite",
+    "fr": "LE MAROCAIN, SUITE",
+    "groups": [
+      {
+        "name": "SANDWICHES MAROCAINS AU PAIN TAFARNOUT",
+        "note": "",
+        "items": [
+          {
+            "id": "le-marocain-suite-sandwiches-marocains-au-pain-tafarnout-brochettes-de-veau-sandwich",
+            "name": "Brochettes de Veau (sandwich)",
+            "note": "",
+            "price": 48
+          },
+          {
+            "id": "le-marocain-suite-sandwiches-marocains-au-pain-tafarnout-brochettes-de-poulet-sandwich",
+            "name": "Brochettes de Poulet (sandwich)",
+            "note": "",
+            "price": 38
+          },
+          {
+            "id": "le-marocain-suite-sandwiches-marocains-au-pain-tafarnout-brochettes-kefta-sandwich",
+            "name": "Brochettes Kefta (sandwich)",
+            "note": "",
+            "price": 45
+          },
+          {
+            "id": "le-marocain-suite-sandwiches-marocains-au-pain-tafarnout-sandwich-instagram",
+            "name": "Sandwich Instagram",
+            "note": "",
+            "price": 45
+          }
+        ]
+      },
+      {
+        "name": "CHOUWAYA",
+        "note": "",
+        "items": [
+          {
+            "id": "le-marocain-suite-chouwaya-brochettes-de-poulet-chouwaya",
+            "name": "Brochettes de Poulet (chouwaya)",
+            "note": "",
+            "price": 78
+          },
+          {
+            "id": "le-marocain-suite-chouwaya-brochettes-de-veau-chouwaya",
+            "name": "Brochettes de Veau (chouwaya)",
+            "note": "",
+            "price": 98
+          },
+          {
+            "id": "le-marocain-suite-chouwaya-brochettes-kefta-chouwaya",
+            "name": "Brochettes Kefta (chouwaya)",
+            "note": "",
+            "price": 88
+          },
+          {
+            "id": "le-marocain-suite-chouwaya-brochettes-de-poisson-aux-herbes-d-atlas",
+            "name": "Brochettes de Poisson aux Herbes d'Atlas",
+            "note": "",
+            "price": 88
+          },
+          {
+            "id": "le-marocain-suite-chouwaya-mixte-grilles-brochettes-de-veau-poulet-et-kefta",
+            "name": "Mixte grilles brochettes de veau, poulet et Kefta",
+            "note": "",
+            "price": 110
+          },
+          {
+            "id": "le-marocain-suite-chouwaya-cotelettes-d-agneau",
+            "name": "Côtelettes d'agneau",
+            "note": "",
+            "price": 125
+          },
+          {
+            "id": "le-marocain-suite-chouwaya-pain-tafarnout",
+            "name": "Pain Tafarnout",
+            "note": "",
+            "price": 7
+          }
+        ]
+      },
+      {
+        "name": "Couscous / Rfissa / Seffa",
+        "note": "",
+        "items": [
+          {
+            "id": "le-marocain-suite-couscous-rfissa-seffa-couscous",
+            "name": "COUSCOUS",
+            "note": "Vendredis uniquement",
+            "price": 68
+          },
+          {
+            "id": "le-marocain-suite-couscous-rfissa-seffa-rfissa-au-poulet",
+            "name": "RFISSA au poulet",
+            "note": "Mercredis uniquement",
+            "price": 78
+          },
+          {
+            "id": "le-marocain-suite-couscous-rfissa-seffa-seffa-au-poulet",
+            "name": "SEFFA au poulet",
+            "note": "Jeudis uniquement",
+            "price": 78
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "cuisine-asiatique",
+    "fr": "CUISINE ASIATIQUE",
+    "groups": [
+      {
+        "name": "SOUPES",
+        "note": "",
+        "items": [
+          {
+            "id": "cuisine-asiatique-soupes-soupe-de-poulet-et-vermicelle",
+            "name": "Soupe de Poulet et Vermicelle",
+            "note": "",
+            "price": 45
+          },
+          {
+            "id": "cuisine-asiatique-soupes-soupe-aux-fruits-de-mer",
+            "name": "Soupe aux Fruits de Mer",
+            "note": "",
+            "price": 48
+          },
+          {
+            "id": "cuisine-asiatique-soupes-pho-crevettes",
+            "name": "Pho Crevettes",
+            "note": "",
+            "price": 52
+          }
+        ]
+      },
+      {
+        "name": "SALADES",
+        "note": "",
+        "items": [
+          {
+            "id": "cuisine-asiatique-salades-spicy-and-sour-vermicelli-salad",
+            "name": "Spicy And Sour Vermicelli Salad",
+            "note": "",
+            "price": 66
+          },
+          {
+            "id": "cuisine-asiatique-salades-salade-vietnamienne",
+            "name": "Salade Vietnamienne",
+            "note": "",
+            "price": 58
+          }
+        ]
+      },
+      {
+        "name": "AMUSES-BOUCHE",
+        "note": "",
+        "items": [
+          {
+            "id": "cuisine-asiatique-amuses-bouche-nems-au-poulet",
+            "name": "Nems au Poulet",
+            "note": "",
+            "price": 42
+          },
+          {
+            "id": "cuisine-asiatique-amuses-bouche-nems-aux-crevettes",
+            "name": "Nems aux Crevettes",
+            "note": "",
+            "price": 45
+          },
+          {
+            "id": "cuisine-asiatique-amuses-bouche-bouchees-de-fruits-de-mer",
+            "name": "Bouchées de Fruits de Mer",
+            "note": "",
+            "price": 45
+          },
+          {
+            "id": "cuisine-asiatique-amuses-bouche-rouleaux-de-printemps",
+            "name": "Rouleaux de Printemps",
+            "note": "",
+            "price": 42
+          },
+          {
+            "id": "cuisine-asiatique-amuses-bouche-bourse-de-saumon",
+            "name": "Bourse de saumon",
+            "note": "",
+            "price": 42
+          }
+        ]
+      },
+      {
+        "name": "NOUILLES ET RIZ",
+        "note": "",
+        "items": [
+          {
+            "id": "cuisine-asiatique-nouilles-et-riz-nouilles-sautees-aux-eminces-de-buf-et-legumes-frais",
+            "name": "Nouilles Sautées aux Émincés de Bœuf et Légumes Frais",
+            "note": "",
+            "price": 64
+          },
+          {
+            "id": "cuisine-asiatique-nouilles-et-riz-nouilles-sautees-aux-crevettes",
+            "name": "Nouilles Sautées aux Crevettes",
+            "note": "",
+            "price": 64
+          },
+          {
+            "id": "cuisine-asiatique-nouilles-et-riz-riz-cantonais",
+            "name": "Riz Cantonais",
+            "note": "",
+            "price": 54
+          },
+          {
+            "id": "cuisine-asiatique-nouilles-et-riz-vermicelle-aux-crevettes",
+            "name": "Vermicelle aux Crevettes",
+            "note": "",
+            "price": 68
+          },
+          {
+            "id": "cuisine-asiatique-nouilles-et-riz-riz-nature",
+            "name": "Riz Nature",
+            "note": "",
+            "price": 11
+          }
+        ]
+      },
+      {
+        "name": "FRUITS DE MER",
+        "note": "",
+        "items": [
+          {
+            "id": "cuisine-asiatique-fruits-de-mer-crevettes-au-gingembre",
+            "name": "Crevettes au Gingembre",
+            "note": "",
+            "price": 86
+          },
+          {
+            "id": "cuisine-asiatique-fruits-de-mer-spirale-d-aubergine",
+            "name": "Spirale d'Aubergine",
+            "note": "",
+            "price": 72
+          }
+        ]
+      },
+      {
+        "name": "VOLAILLES",
+        "note": "",
+        "items": [
+          {
+            "id": "cuisine-asiatique-volailles-poulet-piquant",
+            "name": "Poulet Piquant",
+            "note": "",
+            "price": 59
+          },
+          {
+            "id": "cuisine-asiatique-volailles-wok-de-poulet-aux-cacahuetes",
+            "name": "Wok de Poulet aux Cacahuètes",
+            "note": "",
+            "price": 59
+          },
+          {
+            "id": "cuisine-asiatique-volailles-eminces-de-poulet-au-gingembre-et-champignons-frais",
+            "name": "Émincés de Poulet au Gingembre et Champignons Frais",
+            "note": "",
+            "price": 59
+          }
+        ]
+      },
+      {
+        "name": "BŒUFS",
+        "note": "",
+        "items": [
+          {
+            "id": "cuisine-asiatique-bufs-marmite-d-aubergine-aux-eminces-de-buf",
+            "name": "Marmite d'Aubergine aux Émincés de Bœuf",
+            "note": "",
+            "price": 68
+          },
+          {
+            "id": "cuisine-asiatique-bufs-eminces-de-buf-au-gingembre-et-champignons-frais",
+            "name": "Émincés de Bœuf au Gingembre et Champignons Frais",
+            "note": "",
+            "price": 68
+          },
+          {
+            "id": "cuisine-asiatique-bufs-buf-croustillant-aigre-doux",
+            "name": "Bœuf Croustillant Aigre-Doux",
+            "note": "",
+            "price": 68
+          }
+        ]
+      },
+      {
+        "name": "VÉGÉTARIEN",
+        "note": "",
+        "items": [
+          {
+            "id": "cuisine-asiatique-vegetarien-wok-de-legumes",
+            "name": "Wok de Légumes",
+            "note": "",
+            "price": 48
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "cuisine-japonaise",
+    "fr": "CUISINE JAPONAISE",
+    "groups": [
+      {
+        "name": "MAKI",
+        "note": "",
+        "items": [
+          {
+            "id": "cuisine-japonaise-maki-pack-maki-8",
+            "name": "Pack Maki (8)",
+            "note": "",
+            "price": 30
+          },
+          {
+            "id": "cuisine-japonaise-maki-maki-saumon-6",
+            "name": "Maki Saumon (6)",
+            "note": "",
+            "price": 30
+          },
+          {
+            "id": "cuisine-japonaise-maki-yoshi-maki-6",
+            "name": "Yoshi Maki (6)",
+            "note": "",
+            "price": 38
+          },
+          {
+            "id": "cuisine-japonaise-maki-haru-maki-8",
+            "name": "Haru Maki (8)",
+            "note": "",
+            "price": 46
+          },
+          {
+            "id": "cuisine-japonaise-maki-haru-maki-crabe-8",
+            "name": "Haru Maki Crabe (8)",
+            "note": "",
+            "price": 46
+          },
+          {
+            "id": "cuisine-japonaise-maki-haru-maki-ebi-8",
+            "name": "Haru Maki Ebi (8)",
+            "note": "",
+            "price": 46
+          },
+          {
+            "id": "cuisine-japonaise-maki-haru-sake-6",
+            "name": "Haru Sake (6)",
+            "note": "",
+            "price": 62
+          },
+          {
+            "id": "cuisine-japonaise-maki-maki-gambas-6",
+            "name": "Maki gambas (6)",
+            "note": "",
+            "price": 40
+          },
+          {
+            "id": "cuisine-japonaise-maki-maki-saumon-avocat-6",
+            "name": "Maki saumon avocat (6)",
+            "note": "",
+            "price": 35
+          }
+        ]
+      },
+      {
+        "name": "NIGIRI SUSHI",
+        "note": "",
+        "items": [
+          {
+            "id": "cuisine-japonaise-nigiri-sushi-nigiri-sushi-crevette-3",
+            "name": "Nigiri Sushi Crevette (3)",
+            "note": "",
+            "price": 28
+          },
+          {
+            "id": "cuisine-japonaise-nigiri-sushi-nigiri-sushi-saumon-3",
+            "name": "Nigiri Sushi Saumon (3)",
+            "note": "",
+            "price": 36
+          }
+        ]
+      },
+      {
+        "name": "SASHIMI",
+        "note": "",
+        "items": [
+          {
+            "id": "cuisine-japonaise-sashimi-sashimi-saumon-4",
+            "name": "Sashimi Saumon (4)",
+            "note": "",
+            "price": 46
+          }
+        ]
+      },
+      {
+        "name": "TARTARES",
+        "note": "",
+        "items": [
+          {
+            "id": "cuisine-japonaise-tartares-tartare-de-saumon-et-avocat-2",
+            "name": "Tartare de Saumon et Avocat (2)",
+            "note": "",
+            "price": 70
+          },
+          {
+            "id": "cuisine-japonaise-tartares-trio-de-minis-tartares-3",
+            "name": "Trio de Minis Tartares (3)",
+            "note": "",
+            "price": 49
+          },
+          {
+            "id": "cuisine-japonaise-tartares-sushi-tartine-2",
+            "name": "Sushi Tartine (2)",
+            "note": "",
+            "price": 48
+          }
+        ]
+      },
+      {
+        "name": "ROLLS",
+        "note": "",
+        "items": [
+          {
+            "id": "cuisine-japonaise-rolls-california-dragon-roll-4",
+            "name": "California Dragon Roll (4)",
+            "note": "",
+            "price": 32
+          },
+          {
+            "id": "cuisine-japonaise-rolls-california-ebi-fry-4",
+            "name": "California Ebi Fry (4)",
+            "note": "",
+            "price": 32
+          },
+          {
+            "id": "cuisine-japonaise-rolls-shake-5",
+            "name": "Shake (5)",
+            "note": "",
+            "price": 42
+          },
+          {
+            "id": "cuisine-japonaise-rolls-california-cream-cheese-4",
+            "name": "California Cream Cheese (4)",
+            "note": "",
+            "price": 32
+          },
+          {
+            "id": "cuisine-japonaise-rolls-california-shake-yaki-roll-4",
+            "name": "California Shake Yaki Roll (4)",
+            "note": "",
+            "price": 32
+          },
+          {
+            "id": "cuisine-japonaise-rolls-crunchy-4",
+            "name": "Crunchy (4)",
+            "note": "",
+            "price": 34
+          },
+          {
+            "id": "cuisine-japonaise-rolls-arregattez-4",
+            "name": "Arregattez (4)",
+            "note": "",
+            "price": 36
+          },
+          {
+            "id": "cuisine-japonaise-rolls-california-dreaming-6",
+            "name": "California Dreaming (6)",
+            "note": "",
+            "price": 48
+          },
+          {
+            "id": "cuisine-japonaise-rolls-gourmet-roll-5",
+            "name": "Gourmet Roll (5)",
+            "note": "",
+            "price": 72
+          },
+          {
+            "id": "cuisine-japonaise-rolls-green-mantis-5",
+            "name": "Green Mantis (5)",
+            "note": "",
+            "price": 59
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "poke-bowl-fried-rolls",
+    "fr": "POKÉ BOWL + FRIED ROLLS",
+    "groups": [
+      {
+        "name": "POKÉ BOWL (composez)",
+        "note": "Named bowls have no individual price printed — priced by Régulier/XL size.",
+        "items": [
+          {
+            "id": "poke-bowl-fried-rolls-poke-bowl-composez-poke-bowl-regulier",
+            "name": "Poké Bowl Régulier",
+            "note": "",
+            "price": 62
+          },
+          {
+            "id": "poke-bowl-fried-rolls-poke-bowl-composez-poke-bowl-xl",
+            "name": "Poké Bowl XL",
+            "note": "",
+            "price": 85
+          },
+          {
+            "id": "poke-bowl-fried-rolls-poke-bowl-composez-poke-saumon",
+            "name": "Poke Saumon",
+            "note": "Prix non imprimé — tarif Régulier/XL selon taille",
+            "options": [
+              {
+                "label": "Régulier",
+                "price": 62
+              },
+              {
+                "label": "XL",
+                "price": 85
+              }
+            ],
+            "assumed": true
+          },
+          {
+            "id": "poke-bowl-fried-rolls-poke-bowl-composez-poke-saumon-xl",
+            "name": "Poke Saumon XL",
+            "note": "Prix non imprimé — tarif Régulier/XL selon taille",
+            "options": [
+              {
+                "label": "Régulier",
+                "price": 62
+              },
+              {
+                "label": "XL",
+                "price": 85
+              }
+            ],
+            "assumed": true
+          },
+          {
+            "id": "poke-bowl-fried-rolls-poke-bowl-composez-poke-poulet-teriyaki",
+            "name": "Poke Poulet Teriyaki",
+            "note": "Prix non imprimé — tarif Régulier/XL selon taille",
+            "options": [
+              {
+                "label": "Régulier",
+                "price": 62
+              },
+              {
+                "label": "XL",
+                "price": 85
+              }
+            ],
+            "assumed": true
+          },
+          {
+            "id": "poke-bowl-fried-rolls-poke-bowl-composez-poke-poulet-teriyaki-xl",
+            "name": "Poke Poulet Teriyaki XL",
+            "note": "Prix non imprimé — tarif Régulier/XL selon taille",
+            "options": [
+              {
+                "label": "Régulier",
+                "price": 62
+              },
+              {
+                "label": "XL",
+                "price": 85
+              }
+            ],
+            "assumed": true
+          },
+          {
+            "id": "poke-bowl-fried-rolls-poke-bowl-composez-poke-yaki",
+            "name": "Poke Yaki",
+            "note": "Prix non imprimé — tarif Régulier/XL selon taille",
+            "options": [
+              {
+                "label": "Régulier",
+                "price": 62
+              },
+              {
+                "label": "XL",
+                "price": 85
+              }
+            ],
+            "assumed": true
+          },
+          {
+            "id": "poke-bowl-fried-rolls-poke-bowl-composez-poke-yaki-xl",
+            "name": "Poke Yaki XL",
+            "note": "Prix non imprimé — tarif Régulier/XL selon taille",
+            "options": [
+              {
+                "label": "Régulier",
+                "price": 62
+              },
+              {
+                "label": "XL",
+                "price": 85
+              }
+            ],
+            "assumed": true
+          }
+        ]
+      },
+      {
+        "name": "FRIED ROLLS",
+        "note": "",
+        "items": [
+          {
+            "id": "poke-bowl-fried-rolls-fried-rolls-fry-california-4",
+            "name": "Fry California (4)",
+            "note": "",
+            "price": 32
+          },
+          {
+            "id": "poke-bowl-fried-rolls-fried-rolls-dragon-eye-4",
+            "name": "Dragon Eye (4)",
+            "note": "",
+            "price": 32
+          },
+          {
+            "id": "poke-bowl-fried-rolls-fried-rolls-sushi-pizza-blue-berry-8",
+            "name": "Sushi Pizza Blue Berry (8)",
+            "note": "",
+            "price": 44
+          },
+          {
+            "id": "poke-bowl-fried-rolls-fried-rolls-special-asia-5",
+            "name": "Spécial Asia (5)",
+            "note": "",
+            "price": 54
+          },
+          {
+            "id": "poke-bowl-fried-rolls-fried-rolls-tiger-eye-5",
+            "name": "Tiger Eye (5)",
+            "note": "",
+            "price": 54
+          },
+          {
+            "id": "poke-bowl-fried-rolls-fried-rolls-dynamite-5",
+            "name": "Dynamite (5)",
+            "note": "",
+            "price": 56
+          },
+          {
+            "id": "poke-bowl-fried-rolls-fried-rolls-blue-berry-roll-4",
+            "name": "Blue Berry-Roll (4)",
+            "note": "",
+            "price": 68
+          },
+          {
+            "id": "poke-bowl-fried-rolls-fried-rolls-lava-explosion-6",
+            "name": "Lava Explosion (6)",
+            "note": "",
+            "price": 68
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "assortiments-bentos",
+    "fr": "ASSORTIMENTS + BENTOS",
+    "groups": [
+      {
+        "name": "ASSORTIMENTS",
+        "note": "",
+        "items": [
+          {
+            "id": "assortiments-bentos-assortiments-soleil-levant",
+            "name": "Soleil Levant",
+            "note": "",
+            "price": 78
+          },
+          {
+            "id": "assortiments-bentos-assortiments-ninja-grill",
+            "name": "Ninja Grill",
+            "note": "",
+            "price": 89
+          },
+          {
+            "id": "assortiments-bentos-assortiments-delices-de-geisha",
+            "name": "Délices de Geisha",
+            "note": "",
+            "price": 86
+          },
+          {
+            "id": "assortiments-bentos-assortiments-le-palangrier",
+            "name": "Le Palangrier",
+            "note": "",
+            "price": 220
+          },
+          {
+            "id": "assortiments-bentos-assortiments-assortiment-de-sushi",
+            "name": "Assortiment de Sushi",
+            "note": "",
+            "options": [
+              {
+                "label": "30 pièces",
+                "price": 240
+              },
+              {
+                "label": "40 pièces",
+                "price": 310
+              },
+              {
+                "label": "60 pièces",
+                "price": 440
+              }
+            ]
+          },
+          {
+            "id": "assortiments-bentos-assortiments-assortiment-crispy",
+            "name": "Assortiment Crispy",
+            "note": "",
+            "options": [
+              {
+                "label": "30 pièces",
+                "price": 212
+              },
+              {
+                "label": "60 pièces",
+                "price": 360
+              }
+            ]
+          },
+          {
+            "id": "assortiments-bentos-assortiments-assortiment-mixte-24-pieces",
+            "name": "Assortiment Mixte (24 pièces)",
+            "note": "",
+            "price": 154
+          }
+        ]
+      },
+      {
+        "name": "BENTOS",
+        "note": "",
+        "items": [
+          {
+            "id": "assortiments-bentos-bentos-bento-f",
+            "name": "BENTO F",
+            "note": "",
+            "price": 88
+          },
+          {
+            "id": "assortiments-bentos-bentos-bento-g",
+            "name": "BENTO G",
+            "note": "",
+            "price": 84
+          }
+        ]
+      }
+    ]
+  }
+];
+
+function norm(s){ return String(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase(); }
+function priceText(it){
+  if (it.options){ var ps = it.options.map(function(o){return o.price;});
+    return Math.min.apply(null,ps) + " \u2013 " + Math.max.apply(null,ps) + " DH"; }
+  return it.price + " DH";
+}
+function optText(it){
+  if (it.options){ return it.options.map(function(o){ return o.label + " " + o.price + " DH"; }).join(" \u00b7 ")
+    + (it.note ? " \u2014 " + it.note : ""); }
+  if (it.flavours){ return "Parfum au choix \u2014 " + it.flavours.length + " parfums"; }
+  return it.note || "";
+}
+function dishHTML(it){
+  var opt = optText(it);
+  return '<div class="dish"><div class="d-names"><div class="d-name">' + esc(it.name) + '</div>'
+    + (opt ? '<div class="d-opt">' + esc(opt) + '</div>' : '')
+    + '</div><span class="d-dots"></span><p class="d-price">' + esc(priceText(it)) + '</p></div>';
+}
+function esc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;"); }
+function renderMenu(filter){
+  var q = norm(filter);
+  var grid = document.getElementById("menuGrid");
+  var pills = document.getElementById("catPills");
+  var html = "", pillsHtml = "", shown = 0, total = 0;
+  MENU.forEach(function(cat){
+    var secHtml = "", secCount = 0;
+    cat.groups.forEach(function(grp){
+      var items = grp.items.filter(function(it){ return !q || norm(it.name).indexOf(q) !== -1; });
+      if (!items.length) return;
+      if (grp.name) secHtml += '<h3 class="group-head">' + esc(grp.name) + '</h3>';
+      if (grp.note) secHtml += '<p class="group-note">' + esc(grp.note) + '</p>';
+      items.forEach(function(it){ secHtml += dishHTML(it); secCount++; });
+    });
+    total += cat.groups.reduce(function(n,g){ return n + g.items.length; }, 0);
+    if (!secCount) return;
+    shown += secCount;
+    pillsHtml += '<a class="pill" href="#sec-' + cat.id + '">' + esc(cat.fr) + '</a>';
+    html += '<section class="col" id="sec-' + cat.id + '" aria-label="' + esc(cat.fr) + '">'
+      + '<div class="col-head"><h2>' + esc(cat.fr) + ' <span class="sec-count">' + secCount + ' plats</span></h2></div>'
+      + secHtml + '</section>';
+  });
+  grid.innerHTML = html || '<div class="no-results">Aucun plat ne correspond à votre recherche.</div>';
+  pills.innerHTML = pillsHtml;
+  var cnt = document.getElementById("searchCount");
+  if (q){ cnt.hidden = false; cnt.textContent = shown + " plat" + (shown > 1 ? "s" : "") + " sur " + total + " \u2014 Blue Berry"; }
+  else { cnt.hidden = true; }
+}
+document.getElementById("menuSearch").addEventListener("input", function(e){ renderMenu(e.target.value); });
+renderMenu("");
+</script>
+</body>
+</html>
