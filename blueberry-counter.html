@@ -526,6 +526,20 @@
         background: linear-gradient(90deg, #E8A93D, #F2C14E);
         -webkit-background-clip: text; background-clip: text; color: transparent;
       }
+      /* ---------- Fix 2026-11-13: uncramp the header on narrow phones ----------
+         The native APK STATS button floats over the WebView's top-right
+         corner (~104x48px at top:12 right:12). On small screens: stack the
+         brand (logo over subtitle), drop the location from the subtitle,
+         reserve the top-right zone with right padding so the title never
+         runs underneath the STATS button, and move the lock to the left
+         end of the actions row so it sits far from the STATS button. */
+      @media (max-width:560px){
+        .brand{ flex-direction:column; align-items:flex-start; gap:6px; padding-right:118px; }
+        .brand-loc{ display:none; }
+        .topbar{ row-gap:14px; }
+        .top-actions{ justify-content:flex-start; }
+        .lock-btn{ order:-1; }
+      }
       
   /* ---------- Blue Berry logo lockup (faithful rebuild of the real logo) ---------- */
   .bb-lockup{ display:inline-flex; align-items:center; gap:.35em; font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif; }
@@ -562,7 +576,7 @@
     <header class="topbar">
       <div class="brand">
         <div class="brand-lockup"><span class="bb-lockup"><span class="bb-word"><span class="bb-name">BLUE BERRY</span><span class="bb-since">DEPUIS 1998</span></span><svg class="bb-cluster" viewBox="0 0 120 118" aria-hidden="true"><path d="M60 36 C 76 24, 90 16, 95 5" fill="none" stroke="#77A3DC" stroke-width="5" stroke-linecap="round"/><path d="M52 38 Q 50 22, 64 16 Q 66 30, 52 38 Z" fill="#77A3DC" stroke="#fff" stroke-width="1.5"/><g fill="#77A3DC" stroke="#fff" stroke-width="2"><circle cx="60" cy="34" r="10"/><circle cx="42" cy="48" r="11"/><circle cx="78" cy="48" r="11"/><circle cx="27" cy="64" r="11"/><circle cx="57" cy="64" r="12"/><circle cx="87" cy="64" r="11"/><circle cx="41" cy="82" r="11"/><circle cx="71" cy="82" r="11"/><circle cx="56" cy="98" r="11"/><circle cx="30" cy="46" r="8"/><circle cx="90" cy="46" r="8"/></g><g fill="#fff"><circle cx="56" cy="30" r="1.8"/><circle cx="38" cy="44" r="1.8"/><circle cx="74" cy="44" r="1.8"/><circle cx="23" cy="60" r="1.8"/><circle cx="53" cy="60" r="1.8"/><circle cx="83" cy="60" r="1.8"/><circle cx="37" cy="78" r="1.8"/><circle cx="67" cy="78" r="1.8"/><circle cx="52" cy="94" r="1.8"/></g><circle cx="106" cy="14" r="9" fill="#fff" stroke="#77A3DC" stroke-width="2"/><text x="106" y="18" font-size="11" font-weight="700" text-anchor="middle" fill="#77A3DC" font-family="system-ui,Arial,sans-serif">R</text></svg></span></div>
-        <div class="brand-sub">Comptoir — Commandes en direct · Hay Riad, Rabat</div>
+        <div class="brand-sub">Comptoir — Commandes en direct<span class="brand-loc"> · Hay Riad, Rabat</span></div>
       </div>
       <div class="top-actions">
         <span class="conn unconf" id="connStatus"><span class="dot"></span><span id="connText">Connexion…</span></span>
