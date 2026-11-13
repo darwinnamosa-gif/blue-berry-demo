@@ -149,6 +149,15 @@
   .no-results{ grid-column:1 / -1; background:var(--paper); border-radius:18px; padding:34px 20px; text-align:center; font-weight:800; color:var(--muted); }
   .menu-sub{ background:#F2B705; color:#22303F; }
   .bon-appetit{ color:#F2B705; }
+  /* ---------- Fix 2026-11-13: footer — one clean centered line per piece ---------- */
+  .foot-text{ text-align:center; }
+  .foot-open .foot-line, .foot-brand .foot-line{ display:block; }
+  .foot-open .foot-line + .foot-line{ margin-top:2px; }
+  .foot-brand{ margin-top:22px; }
+  .foot-brand .foot-line + .foot-line{ margin-top:6px; }
+  .foot-brand .latin{ font-size:1.15rem; }
+  .foot-credit{ font-size:.78rem; font-weight:600; color:rgba(242,183,5,.75); }
+  @media (max-width:860px){ .foot-brand{ font-size:.88rem; } }
   
   /* ---------- Blue Berry logo lockup (faithful rebuild of the real logo) ---------- */
   .bb-lockup{ display:inline-flex; align-items:center; gap:.35em; font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif; }
@@ -185,8 +194,8 @@
   <footer>
     <div class="foot-flex">
       <div class="foot-text">
-        <p class="foot-open">Ouvert tous les jours 08:00 — 23:00 • <span class="row2">Sur place &amp; À emporter</span></p>
-        <p class="foot-brand"><span class="latin">Blue Berry</span> — Av. Mehdi Ben Barka, Aswak Assalam, Hay Riad, Rabat · Tél. 0661 72 39 54 · Instagram blueberry_maroc · www.blueberry.ma</p>
+        <p class="foot-open"><span class="foot-line">Ouvert tous les jours</span><span class="foot-line">08:00 — 23:00</span><span class="foot-line">Sur place &amp; À emporter</span></p>
+        <p class="foot-brand"><span class="foot-line latin">Blue Berry</span><span class="foot-line">Av. Mehdi Ben Barka, Aswak Assalam, Hay Riad, Rabat</span><span class="foot-line">Tél. 0661 72 39 54</span><span class="foot-line">Instagram blueberry_maroc · www.blueberry.ma</span><span class="foot-line foot-credit">Photos d’illustration : Openverse — licence Creative Commons</span></p>
       </div>
       <div class="qr-box">
         <div class="qr-img"><span>Scannez le QR code de votre table pour commander</span></div>
@@ -2935,7 +2944,7 @@ function renderMenu(filter){
     shown += secCount;
     pillsHtml += '<a class="pill" href="#sec-' + cat.id + '">' + esc(cat.fr) + '</a>';
     html += '<section class="col" id="sec-' + cat.id + '" aria-label="' + esc(cat.fr) + '">'
-      + '<div class="col-head"><h2>' + esc(cat.fr) + ' <span class="sec-count">' + secCount + ' plats</span></h2></div>'
+      + '<div class="col-head"><img class="cat-photo" src="assets/cat-' + cat.id + '.jpg" alt="Photo — ' + esc(cat.fr) + '" loading="lazy"><h2>' + esc(cat.fr) + ' <span class="sec-count">' + secCount + ' plats</span></h2></div>'
       + secHtml + '</section>';
   });
   grid.innerHTML = html || '<div class="no-results">Aucun plat ne correspond à votre recherche.</div>';
