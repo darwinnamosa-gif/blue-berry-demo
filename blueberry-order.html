@@ -22,10 +22,23 @@
    status.json lives next to this page ({"enabled": true/false}).
    If enabled === false the whole page is replaced by a branded
    "suspended" screen and NOTHING else runs (no gate, no menu, no
-   Firebase init). FAIL-OPEN: any fetch error, timeout, malformed
-   JSON or missing file leaves the page working exactly as before. */
+   Firebase init). LAST-KNOWN STATUS: the flag is cached in
+   localStorage on every successful fetch; once this phone has seen
+   "disabled", the suspended screen shows immediately even offline
+   (the background fetch still runs, and if it reports enabled the
+   page reloads to normal). FAIL-OPEN: no cached value + any fetch
+   error, timeout, malformed JSON or missing file leaves the page
+   working exactly as before. */
 (function(){
-  window.__BLUEBERRY_DISABLED = false;
+  var LS_KEY = 'blueberry_service_status';
+  function readCache(){
+    try { return window.localStorage.getItem(LS_KEY); } catch(e){ return null; }
+  }
+  function writeCache(v){
+    try { window.localStorage.setItem(LS_KEY, v); } catch(e){}
+  }
+  var cachedDisabled = (readCache() === 'disabled');
+  window.__BLUEBERRY_DISABLED = cachedDisabled;
   window.__BB_GATE_DONE = false;
   try {
     var _st = document.createElement('style');
@@ -50,6 +63,9 @@
   window.__BB_STATUS_PROMISE = new Promise(function(resolve){
     var done = false;
     function finish(){ if (!done) { done = true; resolve(); } }
+    /* Cached "disabled": show the suspended screen at once — do not
+       wait for the network. The fetch below still runs to refresh. */
+    if (cachedDisabled) { finish(); }
     setTimeout(finish, 6000); /* safety: never leave the page hidden */
     try {
       var c = (typeof AbortController !== 'undefined') ? new AbortController() : null;
@@ -61,7 +77,16 @@
         if (!r || !r.ok) { finish(); return; }
         return r.json();
       }).then(function(j){
-        if (j && j.enabled === false) { window.__BLUEBERRY_DISABLED = true; }
+        if (j && j.enabled === false) {
+          writeCache('disabled');
+          window.__BLUEBERRY_DISABLED = true;
+        } else if (j && j.enabled === true) {
+          writeCache('enabled');
+          /* Was suspended from cache but the service is back on:
+             reload so the normal page renders. */
+          if (cachedDisabled) { window.__BLUEBERRY_DISABLED = false; location.reload(); return; }
+          window.__BLUEBERRY_DISABLED = false;
+        }
         finish();
       }).catch(function(){ clearTimeout(to); finish(); });
     } catch(e){ finish(); }
