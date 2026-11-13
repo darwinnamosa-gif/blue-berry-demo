@@ -4742,7 +4742,7 @@
               return '<div class="avail-row' + (avail ? '' : ' is-out') + '">' +
                 '<div class="avail-name" dir="auto">' + esc(it.name) + '</div>' +
                 '<button type="button" class="avail-btn ' + (avail ? 'on' : 'off') + '" data-avail="' + esc(it.id) + '">' +
-                (avail ? 'Disponible' : 'Makaynch') + '</button></div>';
+                (avail ? 'Disponible' : 'Indisponible') + '</button></div>';
             }).join("");
             catHtml += '<div class="avail-cat"><div class="avail-cat-name">' + esc(cat.fr) +
               (grp.name ? ' \u2014 ' + esc(grp.name) : '') + '</div>' + rows + '</div>';
