@@ -11,10 +11,23 @@
    status.json lives next to this page ({"enabled": true/false}).
    If enabled === false the whole page is replaced by a branded
    "suspended" screen and NOTHING else runs (no gate, no menu, no
-   Firebase init). FAIL-OPEN: any fetch error, timeout, malformed
-   JSON or missing file leaves the page working exactly as before. */
+   Firebase init). LAST-KNOWN STATUS: the flag is cached in
+   localStorage on every successful fetch; once this phone has seen
+   "disabled", the suspended screen shows immediately even offline
+   (the background fetch still runs, and if it reports enabled the
+   page reloads to normal). FAIL-OPEN: no cached value + any fetch
+   error, timeout, malformed JSON or missing file leaves the page
+   working exactly as before. */
 (function(){
-  window.__BLUEBERRY_DISABLED = false;
+  var LS_KEY = 'blueberry_service_status';
+  function readCache(){
+    try { return window.localStorage.getItem(LS_KEY); } catch(e){ return null; }
+  }
+  function writeCache(v){
+    try { window.localStorage.setItem(LS_KEY, v); } catch(e){}
+  }
+  var cachedDisabled = (readCache() === 'disabled');
+  window.__BLUEBERRY_DISABLED = cachedDisabled;
   window.__BB_GATE_DONE = false;
   try {
     var _st = document.createElement('style');
@@ -39,6 +52,9 @@
   window.__BB_STATUS_PROMISE = new Promise(function(resolve){
     var done = false;
     function finish(){ if (!done) { done = true; resolve(); } }
+    /* Cached "disabled": show the suspended screen at once — do not
+       wait for the network. The fetch below still runs to refresh. */
+    if (cachedDisabled) { finish(); }
     setTimeout(finish, 6000); /* safety: never leave the page hidden */
     try {
       var c = (typeof AbortController !== 'undefined') ? new AbortController() : null;
@@ -50,7 +66,16 @@
         if (!r || !r.ok) { finish(); return; }
         return r.json();
       }).then(function(j){
-        if (j && j.enabled === false) { window.__BLUEBERRY_DISABLED = true; }
+        if (j && j.enabled === false) {
+          writeCache('disabled');
+          window.__BLUEBERRY_DISABLED = true;
+        } else if (j && j.enabled === true) {
+          writeCache('enabled');
+          /* Was suspended from cache but the service is back on:
+             reload so the normal page renders. */
+          if (cachedDisabled) { window.__BLUEBERRY_DISABLED = false; location.reload(); return; }
+          window.__BLUEBERRY_DISABLED = false;
+        }
         finish();
       }).catch(function(){ clearTimeout(to); finish(); });
     } catch(e){ finish(); }
@@ -591,6 +616,17 @@
         .top-actions{ justify-content:flex-start; }
         .lock-btn{ order:-1; }
       }
+      /* ---------- Availability search (2026-11-13) ---------- */
+      .avail-search { display: none; margin-top: 12px; }
+      .avail.open .avail-search { display: block; }
+      .avail-search input {
+        width: 100%; height: 46px; padding: 10px 16px;
+        font-size: 15.5px; font-family: inherit; font-weight: 600;
+        border: 2px solid var(--line); border-radius: 999px;
+        background: #fff; color: var(--ink);
+      }
+      .avail-search input:focus { outline: none; border-color: var(--yellow); box-shadow: 0 0 0 3px rgba(119,163,220,.35); }
+      .avail-no-results { text-align: center; font-weight: 800; color: var(--muted); padding: 26px 12px; }
       
   /* ---------- Blue Berry logo lockup (faithful rebuild of the real logo) ---------- */
   .bb-lockup{ display:inline-flex; align-items:center; gap:.35em; font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif; }
@@ -682,6 +718,7 @@
             Disponibilité des plats <span id="availCount"></span>
             <span class="chev">▼</span>
           </button>
+          <div class="avail-search" id="availSearchWrap"><input id="availSearch" type="search" placeholder="Rechercher un plat…" aria-label="Rechercher un plat" autocomplete="off" /></div>
           <div class="avail-body" id="availBody"></div>
         </section>
 
@@ -4806,14 +4843,23 @@
       }
 
 
+      var availQuery = "";
+      function normAvail(s){ return String(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase(); }
       function renderAvailability() {
+        var q = normAvail(availQuery).trim();
         var outCount = 0;
+        MENU.forEach(function (cat) {
+          cat.groups.forEach(function (grp) {
+            grp.items.forEach(function (it) { if (availability[it.id] === false) outCount++; });
+          });
+        });
         var html = MENU.map(function (cat) {
           var catHtml = "";
           cat.groups.forEach(function (grp) {
-            var rows = grp.items.map(function (it) {
+            var items = grp.items.filter(function (it) { return !q || normAvail(it.name).indexOf(q) !== -1; });
+            if (!items.length) return;
+            var rows = items.map(function (it) {
               var avail = availability[it.id] !== false;
-              if (!avail) outCount++;
               return '<div class="avail-row' + (avail ? '' : ' is-out') + '">' +
                 '<div class="avail-name" dir="auto">' + esc(it.name) + '</div>' +
                 '<button type="button" class="avail-btn ' + (avail ? 'on' : 'off') + '" data-avail="' + esc(it.id) + '">' +
@@ -4824,6 +4870,7 @@
           });
           return catHtml;
         }).join("");
+        if (!html) html = '<div class="avail-no-results">Aucun plat trouvé pour « ' + esc(availQuery.trim()) + ' ».</div>';
         document.getElementById("availBody").innerHTML = html;
         document.getElementById("availCount").textContent = outCount ? "(" + outCount + " indisponible" + (outCount > 1 ? "s" : "") + ")" : "";
       }
@@ -5011,6 +5058,10 @@
       });
       document.getElementById("availToggle").addEventListener("click", function () {
         document.getElementById("availSection").classList.toggle("open");
+      });
+      document.getElementById("availSearch").addEventListener("input", function (e) {
+        availQuery = e.target.value;
+        renderAvailability();
       });
 
       /* Refresh elapsed-time labels every 30 s */
