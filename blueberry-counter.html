@@ -4934,30 +4934,43 @@
       }
       function deleteOrder(id) {
         // Safety: only a finished order (served or cancelled) can ever be deleted.
-        // Deletes ONLY /blueberry-orders/<id> — never touches /blueberry-cancelled/<id>, which stays as stats history.
+        // Blue Berry: deleting a cancelled order also removes its
+        // /blueberry-cancelled/<id> snapshot, so Stats stops counting it —
+        // delete means gone everywhere, including Stats.
         if (!orders[id] || (orders[id].status !== "served" && orders[id].status !== "cancelled")) return;
+        var wasCancelled = orders[id].status === "cancelled";
         if (previewMode) {
           delete orders[id];
           delete knownIds[id];
+          if (wasCancelled) { delete cancelled[id]; }
           render();
           return;
         }
         if (ordersRef) { ordersRef.child(id).remove(); }
+        if (wasCancelled && cancelledRef) { cancelledRef.child(id).remove(); }
       }
       function deleteAllServed() {
-        // Only clears /blueberry-orders — /blueberry-cancelled history is intentionally preserved for stats.
+        // Clears finished orders from /blueberry-orders; cancelled ones
+        // also lose their /blueberry-cancelled snapshot, so Stats stops
+        // counting them — delete means gone everywhere, including Stats.
         var updates = {};
+        var cancelledUpdates = {};
         var removed = false;
         Object.keys(orders).forEach(function (id) {
           if (orders[id].status === "served" || orders[id].status === "cancelled") {
+            var isCancelled = orders[id].status === "cancelled";
             removed = true;
-            if (previewMode) { delete orders[id]; delete knownIds[id]; }
-            else { updates[id] = null; }
+            if (previewMode) { delete orders[id]; delete knownIds[id]; if (isCancelled) { delete cancelled[id]; } }
+            else {
+              updates[id] = null;
+              if (isCancelled) { cancelledUpdates[id] = null; }
+            }
           }
         });
         if (!removed) return;
         if (previewMode) { render(); return; }
         if (ordersRef) { ordersRef.update(updates); }
+        if (cancelledRef && Object.keys(cancelledUpdates).length) { cancelledRef.update(cancelledUpdates); }
       }
       function markTablePaid(table) {
         var updates = {};
@@ -4981,7 +4994,8 @@
           if (cancelConfirm[canId] && Date.now() - cancelConfirm[canId] < 4000) {
             delete cancelConfirm[canId];
             // Durable cancellation record for stats: snapshot to /blueberry-cancelled/<id>
-            // before marking cancelled, so deleting the order later never erases the stat.
+            // before marking cancelled. (Deleting the order later removes the
+            // snapshot too, so Stats stops counting it — delete means gone.)
             // Real Firebase mode only — preview mode writes nothing.
             if (!previewMode && cancelledRef && orders[canId]) {
               var cancelSnap = orders[canId];
