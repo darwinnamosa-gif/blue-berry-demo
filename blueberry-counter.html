@@ -697,6 +697,7 @@
         display: none; position: fixed; inset: 0; z-index: 200;
         background: rgba(34,48,63,.55);
         align-items: center; justify-content: center; padding: 20px 16px;
+        overflow-y: auto; /* clavier ouvert : la superposition elle-même défile */
       }
       .bb-modal-overlay.show { display: flex; }
       .bb-modal {
@@ -704,6 +705,19 @@
         width: 100%; max-width: 440px; padding: 22px 20px;
         box-shadow: 0 18px 50px rgba(34,48,63,.3);
         font-family: inherit;
+        /* Clavier (2026-11-15, correctif sans drapeau : le bug touche
+           tous les ports) : sans max-height, la modale centrée, plus
+           haute que la fenêtre rétrécie par le clavier, débordait —
+           haut poussé hors écran, boutons cachés derrière le clavier.
+           dvh suit la hauteur visible (clavier ouvert) ; vh est le
+           repli (WebView ancienne). La modale défile en interne et
+           margin:auto la garde centrée quand elle tient, alignée en
+           haut + défilante quand elle dépasse. */
+        max-height: 92vh;
+        max-height: 92dvh;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        margin: auto;
       }
       .bb-modal h3 { margin: 0 0 16px; font-size: 19px; font-weight: 900; }
       .bb-modal-text { font-size: 15px; line-height: 1.6; color: #22303F; margin: 0 0 18px; }
@@ -735,6 +749,12 @@
         max-width: calc(100vw - 32px); text-align: center;
       }
       .bb-toast.show { display: block; }
+      /* ---------- Ordre des catégories (glisser-déposer) ---------- */
+      .manage-drag-grip { cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; font-size: 18px; line-height: 1; color: #5B6B7F; padding: 4px 6px; margin-inline-end: 2px; border-radius: 8px; flex-shrink: 0; }
+      .manage-drag-grip:active { cursor: grabbing; background: #F4F8FC; color: #22303F; }
+      .manage-cat.dragging { opacity: .55; }
+      .manage-cat.drag-insert-before { box-shadow: 0 -3px 0 0 #F2B705; }
+      .manage-cat.drag-insert-after { box-shadow: 0 3px 0 0 #F2B705; }
 
       /* ---------- Tiroir latéral + vues (2026-11-15) : comptoir propre, commandes uniquement ---------- */
       .drawer-btn {
@@ -3791,13 +3811,17 @@
                         + sectionId seulement si le plat change de section)
      added/<dishId>   : plat complet + sectionId (id Firebase-safe,
                         ex. added-<timestamp>-<aléatoire>)
-     sections/<secId> : {name, fr, ar, createdAt} — une
+     sections/<secId> : {name, fr, ar, createdAt, order?} — une
                         catégorie créée depuis « Ajouter un plat »
                         (id sec-<timestamp>-<aléatoire>). `name` est
                         le nom français (champ historique, conservé
                         comme repli) ; `fr` / `ar` font foi quand ils
                         sont présents. Une section ancienne {name}
                         seul s'affiche avec fr = ar = name.
+                        order (facultatif) : nombre — position de
+                        la section (glisser-déposer ; tri en fin
+                        d'applyMenuOverrides) ; sans order, la
+                        section garde sa place actuelle.
      sections/<secId> : {deleted: true} — une section de BASE
                         supprimée par le propriétaire : elle
                         disparaît du menu, des commandes, de
@@ -3811,7 +3835,8 @@
    (le déplacement est retiré de son override edited/<id> ; si le
    déplacement était la seule modification, l'override disparaît).
    Le menu embarqué (menu.json) reste la base imprimée : les overrides ne
-   font que le modifier en mémoire, au chargement. FAIL-OPEN : si la
+   font que le modifier en mémoire, au chargement, puis en direct
+   (listenMenuOverrides, ci-dessous). FAIL-OPEN : si la
    lecture échoue (pas de réseau, Firebase indisponible), le menu
    embarqué s'affiche tel quel. */
 var MENU_OVERRIDES = null; /* dernier objet overrides chargé (ou null) */
@@ -3912,6 +3937,34 @@ function applyMenuOverrides(overrides){
     if (a.flavours && a.flavours.length) dish.flavours = a.flavours.slice();
     cat.groups[cat.groups.length - 1].items.push(dish);
   });
+  /* Tri des sections (glisser-déposer, « Gérer le menu ») : une
+     section avec un ordre explicite (sections/<id>.order, nombre)
+     se trie par cet ordre croissant ; sans ordre, elle garde sa
+     place actuelle (sections de base dans l'ordre imprimé,
+     sections créées par ordre de création) ; égalité d'ordre :
+     createdAt puis id. Sans aucune valeur order, l'ordre affiché
+     est exactement l'historique. Le tri réordonne le tableau en
+     place (sans le remplacer), donc menu / commande / comptoir /
+     disponibilité (qui itèrent MENU) voient le même ordre, et
+     l'écoute en direct (rebuild sur chaque changement) propage
+     un nouvel ordre sans rechargement. */
+  var _orderOf = overrides.sections || {};
+  var _indexed = MENU.map(function(cat, idx){ return { cat: cat, idx: idx }; });
+  _indexed.sort(function(a, b){
+    var _oa = _orderOf[a.cat.id], _ob = _orderOf[b.cat.id];
+    var _na = (_oa && typeof _oa.order === "number" && isFinite(_oa.order)) ? _oa.order : null;
+    var _nb = (_ob && typeof _ob.order === "number" && isFinite(_ob.order)) ? _ob.order : null;
+    if (_na !== null && _nb !== null) {
+      if (_na !== _nb) return _na - _nb;
+      var _ca = (_oa && _oa.createdAt) || 0, _cb = (_ob && _ob.createdAt) || 0;
+      if (_ca !== _cb) return _ca - _cb;
+      return a.cat.id < b.cat.id ? -1 : (a.cat.id > b.cat.id ? 1 : 0);
+    }
+    if (_na !== null) return -1;
+    if (_nb !== null) return 1;
+    return a.idx - b.idx;
+  });
+  for (var _si = 0; _si < _indexed.length; _si++) MENU[_si] = _indexed[_si].cat;
 }
 function rebuildMenuFromOverrides(){
   /* Repart du menu imprimé, puis réapplique les overrides : idempotent,
@@ -3954,6 +4007,82 @@ function loadMenuOverrides(timeoutMs){
     } catch (e) { finish(false); }
   });
 }
+var _menuOverridesListener = null; /* db.ref('blueberry-menu-overrides') avec .on('value') attaché, ou null */
+var _menuOverridesListenerPromise = null; /* promesse rendue par le premier appel à listenMenuOverrides */
+function listenMenuOverrides(onUpdate, timeoutMs){
+  /* Écoute EN DIRECT du nœud blueberry-menu-overrides : chaque changement
+     (ajout / modification / suppression d'un plat ou d'une catégorie,
+     depuis le comptoir ou un autre appareil) reconstruit le menu affiché
+     sans rechargement de la page. Même attente de l'authentification
+     anonyme que loadMenuOverrides, puis db.ref(...).on('value', ...).
+     Résout true au premier changement reçu (ou à la première valeur),
+     false après timeoutMs (défaut 8000 ms) sans valeur reçue — comme
+     loadMenuOverrides — MAIS l'écoute RESTE attachée après la résolution :
+     les changements ultérieurs mettent toujours le menu à jour.
+     onUpdate(true) est appelé à chaque valeur reçue (menu reconstruit).
+     Valeur null (nœud vidé) : MENU_OVERRIDES = {} et le menu revient
+     à la base imprimée — c'est toujours un changement.
+     Erreur d'écoute : FAIL-OPEN — le dernier menu connu reste affiché,
+     rien n'est effacé, rien n'est levé, rien n'est rejeté.
+     Double appel : si une écoute est déjà attachée, le second appel ne
+     rattache rien et renvoie la promesse existante (le premier onUpdate
+     reste le seul appelé). Si l'attache a échoué (Firebase absent),
+     un nouvel appel peut réessayer. Ne rejette jamais. Aucun sondage :
+     pas de setInterval ni de relecture périodique (le minuteur du premier
+     déclenchement n'est pas un sondage). */
+  if (_menuOverridesListener) return _menuOverridesListenerPromise;
+  var cb = (typeof onUpdate === 'function') ? onUpdate : function(){};
+  var ms = (typeof timeoutMs === 'number' && timeoutMs > 0) ? timeoutMs : 8000;
+  var db = null;
+  var done = false;
+  var resolveFn = null;
+  var dead = false; /* échec synchrone, avant que la promesse soit stockée */
+  function finish(v){ if (!done && resolveFn) { done = true; resolveFn(v); } }
+  function fail(){
+    /* Échec d'attache (Firebase absent, .on indisponible) : la promesse
+       résout false et un appel ultérieur pourra réessayer — rien n'est
+       attaché, donc pas de double attache à craindre. */
+    if (_menuOverridesListenerPromise) _menuOverridesListenerPromise = null;
+    else dead = true;
+    finish(false);
+  }
+  function attach(){
+    if (_menuOverridesListener) return; /* déjà attachée (deux appels en attente d'auth) */
+    try {
+      var ref = db.ref('blueberry-menu-overrides');
+      _menuOverridesListener = ref;
+      ref.on('value', function(snap){
+        var val = snap.val();
+        if (val && typeof val === 'object') MENU_OVERRIDES = val;
+        else MENU_OVERRIDES = {}; /* nœud vidé : retour à la base */
+        rebuildMenuFromOverrides();
+        try { cb(true); } catch (e) {}
+        finish(true);
+      }, function(){
+        /* FAIL-OPEN : l'écoute a échoué (droits, réseau) — on garde
+           le dernier menu connu à l'écran, on n'efface rien. */
+      });
+    } catch (e) { _menuOverridesListener = null; fail(); }
+  }
+  var p = new Promise(function(resolve){
+    resolveFn = resolve;
+    setTimeout(function(){ finish(false); }, ms);
+    try {
+      if (typeof firebase === 'undefined' || typeof firebase.database !== 'function') { fail(); return; }
+      try { db = (typeof getDb === 'function') ? getDb() : firebase.database(); }
+      catch (e) { fail(); return; }
+      var auth = (firebase.auth && typeof firebase.auth === 'function') ? firebase.auth() : null;
+      if (!auth) { attach(); return; }
+      if (auth.currentUser) { attach(); return; }
+      var off = auth.onAuthStateChanged(function(user){
+        if (user) { try { off(); } catch (e) {} attach(); }
+      });
+    } catch (e) { fail(); }
+  });
+  _menuOverridesListenerPromise = p;
+  if (dead) _menuOverridesListenerPromise = null;
+  return p;
+}
 /* ---------- Gérer le menu (comptoir, après déverrouillage PIN) ----------
    Le propriétaire ajoute / modifie / supprime un plat depuis le comptoir :
    les écritures vont dans blueberry-menu-overrides (jamais dans menu.json,
@@ -3962,6 +4091,7 @@ var manageQuery = "";
 var manageEditingId = null;   /* id du plat en cours de modification */
 var manageDeletingId = null;  /* id du plat en cours de suppression */
 var manageDeletingSectionId = null; /* id de la catégorie en cours de suppression */
+var MANAGE_SECTION_REORDER = true; /* poignée ☰ de déplacement affichée (opt-in du port) */
 var MANAGE_DELETE_SECTIONS = true; /* true = le 🗑 de suppression de catégorie est affiché (opt-in du port) */
 var overridesRef = null;      /* db.ref('blueberry-menu-overrides'), après auth */
 function managePriceText(it){
@@ -4044,7 +4174,12 @@ function confirmDeleteSectionModal(){
      de base (aucune entrée, ou entrée {deleted: true} déjà posée) : la
      première s'efface, la seconde est marquée {deleted: true}. */
   var secRec = (MENU_OVERRIDES && MENU_OVERRIDES.sections && MENU_OVERRIDES.sections[sectionId]) || null;
-  var isCustom = !!(secRec && !secRec.deleted);
+  /* Une section créée a un nom ; un enregistrement {order: N}
+     seul (section de base réordonnée) n'en a pas : il ne
+     doit pas passer pour une section personnalisée, sinon
+     sa suppression effacerait l'ordre au lieu de la
+     marquer {deleted: true} — et elle reviendrait. */
+  var isCustom = !!(secRec && !secRec.deleted && (secRec.name || secRec.fr || secRec.ar));
   var dishes = sectionDishes(sectionId);
   MENU_OVERRIDES = MENU_OVERRIDES || {};
   dishes.forEach(function(it){
@@ -4118,10 +4253,10 @@ function renderMenuManage(){
     var catLabel = esc(cat.fr);
     if (cat.ar && cat.ar !== cat.fr) catLabel += ' \u00b7 <span dir="auto">' + esc(cat.ar) + '</span>';
     if (MANAGE_DELETE_SECTIONS) {
-      html += '<div class="manage-cat"><div class="manage-cat-head"><div class="manage-cat-name">' + catLabel + '</div>' +
+      html += '<div class="manage-cat"><div class="manage-cat-head"><div class="manage-cat-name">' + dragGripHTML(cat) + catLabel + '</div>' +
         '<button type="button" class="manage-btn del manage-cat-del" data-delcat="' + esc(cat.id) + '" aria-label="Supprimer la catégorie ' + esc(cat.fr) + '">\ud83d\uddd1\ufe0f</button></div>' + rows + '</div>';
     } else {
-      html += '<div class="manage-cat"><div class="manage-cat-name">' + catLabel + '</div>' + rows + '</div>';
+      html += '<div class="manage-cat"><div class="manage-cat-name">' + dragGripHTML(cat) + catLabel + '</div>' + rows + '</div>';
     }
   });
   var list = document.getElementById("manageList");
@@ -4162,9 +4297,68 @@ function closestAttr(el, attr){
   }
   return null;
 }
+/* ---------- Modales : retour arrière + bouton STATS natif (2026-11-15) ----------
+   Les modales sont rendues HORS des conteneurs de sous-vues (sœurs de
+   main.layout, pas dedans) : la sonde retour de l'APK (tiroir ->
+   sous-vue -> accueil) ne les voit jamais. Ces deux fonctions globales
+   sont le CONTRAT de la sonde (noms exacts, ne pas renommer) : le retour
+   ferme d'abord la modale du dessus, puis seulement le reste. */
+function setCounterStatsVisible(visible){
+  /* Bascule le bouton natif STATS de l'APK (pont AndroidBridge) : caché
+     tant qu'une modale est ouverte (il chevauchait le coin de la
+     modale), restauré à la fermeture — UNIQUEMENT si le comptoir est
+     déverrouillé. L'état déverrouillé est celui de la page : isUnlocked()
+     (clé locale posée par la grille PIN) quand la page le définit ; sans
+     grille PIN, on restaure (comportement historique). Sans APK le pont
+     n'existe pas : l'appel est ignoré, la page marche pareil. */
+  if (typeof AndroidBridge === 'undefined' || !AndroidBridge || typeof AndroidBridge.setStatsVisible !== 'function') return;
+  if (visible && typeof isUnlocked === 'function' && !isUnlocked()) return;
+  AndroidBridge.setStatsVisible(!!visible);
+}
+function isCounterModalOpen(){
+  /* Vrai si au moins une modale Gérer le menu est visible. */
+  return document.querySelectorAll(".bb-modal-overlay.show").length > 0;
+}
+function closeTopCounterModal(){
+  /* Ferme la modale du DESSUS (dernière dans l'ordre du DOM — les
+     superpositions sœurs se peignent dans cet ordre, la dernière est
+     visuellement au-dessus) et SEULEMENT elle. Comme Annuler : abandon,
+     aucune écriture, et le ménage de hideModals pour CETTE modale
+     (champs « nouvelle catégorie » + photo + identifiant en cours).
+     Renvoie vrai si une modale a été fermée, faux sinon. Le bouton
+     STATS ne revient que si plus aucune modale n'est ouverte. */
+  var open = document.querySelectorAll(".bb-modal-overlay.show");
+  if (!open.length) return false;
+  var top = open[open.length - 1];
+  top.classList.remove("show");
+  if (top.id === "editModal") manageEditingId = null;
+  else if (top.id === "deleteModal") manageDeletingId = null;
+  else if (top.id === "deleteSectionModal") manageDeletingSectionId = null;
+  else if (top.id === "addModal") {
+    var nc = document.getElementById("addNewCatName");
+    if (nc) nc.value = "";
+    var ncAr = document.getElementById("addNewCatNameAr");
+    if (ncAr) ncAr.value = "";
+    var ncFr = document.getElementById("addNewCatNameFr");
+    if (ncFr) ncFr.value = "";
+    var nf = document.getElementById("addNewCatField");
+    if (nf) nf.style.display = "none";
+    var nfAr = document.getElementById("addNewCatFieldAr");
+    if (nfAr) nfAr.style.display = "none";
+    var nfFr = document.getElementById("addNewCatFieldFr");
+    if (nfFr) nfFr.style.display = "none";
+    var npf = document.getElementById("addNewCatPhotoField");
+    if (npf) npf.style.display = "none";
+    if (typeof clearNewCatPhoto === "function") clearNewCatPhoto();
+  }
+  if (!isCounterModalOpen()) setCounterStatsVisible(true);
+  return true;
+}
 function showModal(id){
   var m = document.getElementById(id);
-  if (m) m.classList.add("show");
+  if (!m) return;
+  m.classList.add("show");
+  setCounterStatsVisible(false);
 }
 function hideModals(){
   ["editModal", "addModal", "deleteModal", "deleteSectionModal"].forEach(function(id){
@@ -4186,6 +4380,7 @@ function hideModals(){
   manageEditingId = null;
   manageDeletingId = null;
   manageDeletingSectionId = null;
+  setCounterStatsVisible(true); /* modale fermée : le bouton STATS revient, si déverrouillé */
 }
 function openEditModal(id){
   var found = findManageDish(id);
@@ -4354,6 +4549,89 @@ function saveAddModal(){
   hideModals();
   manageToast("Plat ajouté au menu.");
 }
+var dragCatId = null; /* id de la catégorie en cours de déplacement, ou null */
+var dragToIndex = -1; /* position d'insertion courante (0..n) pendant le déplacement */
+function dragGripHTML(cat){
+  return '<span class="manage-drag-grip" data-dragcat="' + esc(cat.id) + '" aria-label="Déplacer la catégorie">\u2630</span>';
+}
+function dragTargetIndex(y){
+  /* Position d'insertion (0..n) dans la liste affichée pour un
+     pointeur à la hauteur y : premier en-tête dont le point médian
+     est sous le pointeur, sinon après le dernier. */
+  var els = document.querySelectorAll("#manageList .manage-cat");
+  for (var i = 0; i < els.length; i++) {
+    var r = els[i].getBoundingClientRect();
+    if (y < r.top + r.height / 2) return i;
+  }
+  return els.length;
+}
+function dragClearIndicator(){
+  var els = document.querySelectorAll("#manageList .manage-cat");
+  for (var i = 0; i < els.length; i++) els[i].classList.remove("drag-insert-before", "drag-insert-after", "dragging");
+}
+function onDragMove(e){
+  if (!dragCatId) return;
+  var y = (e.clientY !== undefined && e.clientY !== null) ? e.clientY : 0;
+  dragToIndex = dragTargetIndex(y);
+  dragClearIndicator();
+  var els = document.querySelectorAll("#manageList .manage-cat");
+  if (!els.length) return;
+  if (dragToIndex < els.length) els[dragToIndex].classList.add("drag-insert-before");
+  else els[els.length - 1].classList.add("drag-insert-after");
+}
+function onDragEnd(e){
+  document.removeEventListener("pointermove", onDragMove);
+  document.removeEventListener("pointerup", onDragEnd);
+  document.removeEventListener("pointercancel", onDragEnd);
+  var els = document.querySelectorAll("#manageList .manage-cat");
+  dragClearIndicator();
+  if (!dragCatId) return;
+  var id = dragCatId;
+  dragCatId = null;
+  var ids = [];
+  for (var k = 0; k < els.length; k++) {
+    var g = els[k].querySelector("[data-dragcat]");
+    if (g) ids.push(g.getAttribute("data-dragcat"));
+  }
+  var from = ids.indexOf(id);
+  if (from === -1) return;
+  var to = dragToIndex;
+  var next = ids.slice();
+  next.splice(from, 1);
+  var at = (to > from) ? to - 1 : to;
+  if (at < 0) at = 0;
+  if (at > next.length) at = next.length;
+  next.splice(at, 0, id);
+  var changed = false;
+  for (var j = 0; j < ids.length; j++) if (ids[j] !== next[j]) { changed = true; break; }
+  if (changed) commitSectionOrder(next);
+}
+function commitSectionOrder(orderedIds){
+  /* Persiste le nouvel ordre visuel : sections/<id>.order = index
+     (0-based) pour CHAQUE section, via .update (jamais .set : une
+     section créée garde name/fr/ar/createdAt/photo, et une section
+     de base sans enregistrement gagne un enregistrement {order: N}
+     seul). Puis retour immédiat à l'écran (rebuild + rendus) ;
+     l'écho de l'écoute en direct resynchronise les mêmes valeurs. */
+  if (!overridesRef) { manageToast("Firebase indisponible \u2014 déplacement impossible pour l'instant."); return; }
+  if (!orderedIds || !orderedIds.length) return;
+  var known = {};
+  MENU.forEach(function(cat){ known[cat.id] = true; });
+  var ids = [];
+  orderedIds.forEach(function(id){ if (known[id] && ids.indexOf(id) === -1) ids.push(id); });
+  if (!ids.length) return;
+  MENU_OVERRIDES = MENU_OVERRIDES || {};
+  MENU_OVERRIDES.sections = MENU_OVERRIDES.sections || {};
+  ids.forEach(function(id, i){
+    overridesRef.child("sections/" + id).update({ order: i });
+    var rec = MENU_OVERRIDES.sections[id];
+    if (rec && typeof rec === "object") rec.order = i;
+    else MENU_OVERRIDES.sections[id] = { order: i };
+  });
+  rebuildMenuFromOverrides();
+  renderAvailability();
+  renderMenuManage();
+}
 function wireMenuManage(){
   document.getElementById("manageToggle").addEventListener("click", function () {
     document.getElementById("manageSection").classList.toggle("open");
@@ -4374,6 +4652,7 @@ function wireMenuManage(){
     });
   });
   document.getElementById("manageList").addEventListener("click", function (e) {
+    if (closestAttr(e.target, "data-dragcat")) return; /* poignée de déplacement : un clic ne fait rien (ni suppression, ni édition) */
     var dc = closestAttr(e.target, "data-delcat");
     if (dc) { openDeleteSectionModal(dc.getAttribute("data-delcat")); return; }
     var ed = closestAttr(e.target, "data-edit");
@@ -4397,6 +4676,40 @@ function wireMenuManage(){
   ["editModal", "addModal", "deleteModal", "deleteSectionModal"].forEach(function(id){
     var m = document.getElementById(id);
     if (m) m.addEventListener("click", function (e) { if (e.target === this) hideModals(); });
+    /* Clavier (2026-11-15) : le champ focusé reste visible juste
+       au-dessus du clavier, sans que la modale saute en haut.
+       focusin remonte (focus ne remonte pas) ; scrollIntoView
+       défile la modale EN INTERNE (overflow-y) avec block:nearest,
+       donc le moins possible. Le second passage attend l'ouverture
+       du clavier (fenêtre rétrécie, ~350 ms) et ne défile que si le
+       champ est toujours focusé et la modale toujours ouverte. */
+    if (m) m.addEventListener("focusin", function (e) {
+      var t = e.target;
+      if (!t || (t.tagName !== "INPUT" && t.tagName !== "SELECT" && t.tagName !== "TEXTAREA")) return;
+      function scrollField(){ if (typeof t.scrollIntoView === "function") t.scrollIntoView({ block: "nearest" }); }
+      scrollField();
+      setTimeout(function(){ if (document.activeElement === t && isCounterModalOpen()) scrollField(); }, 350);
+    });
+  });
+  /* Déplacement des catégories au doigt (Pointer Events) :
+     pointerdown sur la poignée ☰, suivi sur document
+     (la capture du pointeur n'existe pas partout),
+     lâcher = validation du nouvel ordre. Pas de
+     déplacement pendant une recherche (liste filtrée). */
+  var ml = document.getElementById("manageList");
+  if (ml) ml.addEventListener("pointerdown", function(e){
+    var grip = closestAttr(e.target, "data-dragcat");
+    if (!grip) return;
+    if (manageQuery && manageQuery.trim()) return;
+    if (e.preventDefault) e.preventDefault();
+    dragCatId = grip.getAttribute("data-dragcat");
+    dragToIndex = -1;
+    var held = grip.closest ? grip.closest(".manage-cat") : null;
+    if (held) held.classList.add("dragging");
+    if (grip.setPointerCapture) { try { grip.setPointerCapture(e.pointerId); } catch (err) {} }
+    document.addEventListener("pointermove", onDragMove);
+    document.addEventListener("pointerup", onDragEnd);
+    document.addEventListener("pointercancel", onDragEnd);
   });
   renderMenuManage();
 }
