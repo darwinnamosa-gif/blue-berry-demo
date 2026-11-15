@@ -299,6 +299,41 @@
 
 </div><!-- /poster -->
 
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script>
+/* ============================================================
+   FIREBASE_CONFIG — projet Firebase partagé (thon-3s-orders).
+   La page menu lit UNIQUEMENT le nœud blueberry-menu-overrides
+   (modifications du propriétaire). JAMAIS un autre nœud.
+   (Console Firebase > Paramètres du projet > Vos applications > Web)
+   ============================================================ */
+var FIREBASE_CONFIG = {
+  apiKey: "AIzaSyDz8e2BUfNhCl3e_E449nMtZsYA47TDFKg",
+  authDomain: "thon-3s-orders.firebaseapp.com",
+  databaseURL: "https://thon-3s-orders-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "thon-3s-orders",
+  storageBucket: "thon-3s-orders.firebasestorage.app",
+  messagingSenderId: "60533964819",
+  appId: "1:60533964819:web:5e5f8fced88484f55cbfe6"
+};
+function initMenuFirebase(){
+  /* Initialise Firebase + authentification anonyme (lecture seule).
+     Résout toujours (true/false) : un échec ne bloque jamais le menu. */
+  return new Promise(function(resolve){
+    try {
+      if (typeof firebase === 'undefined') { resolve(false); return; }
+      if (!firebase.apps || firebase.apps.length === 0) firebase.initializeApp(FIREBASE_CONFIG);
+      if (firebase.auth && typeof firebase.auth === 'function' && !firebase.auth().currentUser) {
+        firebase.auth().signInAnonymously().catch(function(){});
+      }
+      resolve(true);
+    } catch (e) { resolve(false); }
+  });
+}
+</script>
+
 <script>
 /* Blue Berry — menu (source: menu.json, 333 plats, 19 sections).
    Les 6 Poké Bowls nommés n'ont pas de prix imprimé : affichés en
@@ -2997,6 +3032,140 @@ var MENU = [
     ]
   }
 ];
+var MENU_BASE = JSON.parse(JSON.stringify(MENU));
+/* ---------- Gestion du menu par le propriétaire (blueberry-menu-overrides) ----------
+   Le propriétaire modifie le menu depuis le comptoir (ajouter / modifier /
+   supprimer un plat) sans toucher au code : les modifications vivent dans
+   Firebase, nœud blueberry-menu-overrides :
+     deleted/<dishId> : true
+     edited/<dishId>  : plat complet {name, note, price} ou {name, note,
+                        options:[{label, price}]} (+ flavours si applicable,
+                        + sectionId seulement si le plat change de section)
+     added/<dishId>   : plat complet + sectionId (id Firebase-safe,
+                        ex. added-<timestamp>-<aléatoire>)
+     sections/<secId> : {name: <string>, createdAt: <ms>} — une
+                        catégorie créée depuis « Ajouter un plat »
+                        (id sec-<timestamp>-<aléatoire>) ; la section
+                        est indépendante de ses plats (supprimer un
+                        plat ne supprime jamais sa section).
+   Le menu embarqué (menu.json) reste la base imprimée : les overrides ne
+   font que le modifier en mémoire, au chargement. FAIL-OPEN : si la
+   lecture échoue (pas de réseau, Firebase indisponible), le menu
+   embarqué s'affiche tel quel. */
+var MENU_OVERRIDES = null; /* dernier objet overrides chargé (ou null) */
+function applyMenuOverrides(overrides){
+  if (!overrides || typeof overrides !== 'object') return;
+  /* Sections créées par le propriétaire (« Ajouter un plat » >
+     « ＋ Nouvelle catégorie… ») : appliquées EN PREMIER, dans
+     l'ordre de création, pour que les plats ajoutés / déplacés
+     trouvent leur section par id. Idempotent : un id déjà présent
+     (base ou déjà ajouté) n'est jamais doublé. */
+  var secs = overrides.sections || {};
+  var secIds = Object.keys(secs).sort(function(a, b){
+    var ca = (secs[a] && secs[a].createdAt) || 0;
+    var cb = (secs[b] && secs[b].createdAt) || 0;
+    if (ca !== cb) return ca - cb;
+    return a < b ? -1 : (a > b ? 1 : 0);
+  });
+  secIds.forEach(function(id){
+    var s = secs[id];
+    if (!s || typeof s !== 'object' || !s.name || !String(s.name).trim()) return;
+    for (var i = 0; i < MENU.length; i++) if (MENU[i].id === id) return;
+    MENU.push({ id: id, fr: s.name, ar: s.name, groups: [{ name: '', items: [] }] });
+  });
+  var del = overrides.deleted || {};
+  var edt = overrides.edited || {};
+  var add = overrides.added || {};
+  var moves = [];
+  MENU.forEach(function(cat){
+    cat.groups.forEach(function(grp){
+      var kept = [];
+      grp.items.forEach(function(it){
+        if (del[it.id]) return; /* supprimé par le propriétaire */
+        var e = edt[it.id];
+        if (e && typeof e === 'object' && e.name) {
+          var rep = { id: it.id, name: e.name, note: e.note || '' };
+          if (e.options && e.options.length) {
+            rep.options = e.options.map(function(o){ return { label: String(o.label), price: Math.max(0, +o.price || 0) }; });
+          } else if (e.price !== undefined && e.price !== null && e.price !== '') {
+            rep.price = Math.max(0, +e.price || 0);
+          }
+          if (e.flavours && e.flavours.length) rep.flavours = e.flavours.slice();
+          if (e.assumed) rep.assumed = true;
+          if (e.sectionId && e.sectionId !== cat.id) { moves.push({ dish: rep, sectionId: e.sectionId }); return; }
+          kept.push(rep);
+        } else {
+          kept.push(it);
+        }
+      });
+      grp.items = kept;
+    });
+  });
+  moves.forEach(function(m){
+    for (var i = 0; i < MENU.length; i++) {
+      if (MENU[i].id === m.sectionId && MENU[i].groups.length) {
+        MENU[i].groups[MENU[i].groups.length - 1].items.push(m.dish);
+        break;
+      }
+    }
+  });
+  Object.keys(add).forEach(function(id){
+    var a = add[id];
+    if (!a || typeof a !== 'object' || !a.name || !a.sectionId) return;
+    var cat = null;
+    for (var i = 0; i < MENU.length; i++) if (MENU[i].id === a.sectionId) { cat = MENU[i]; break; }
+    if (!cat || !cat.groups.length) return;
+    var dish = { id: id, name: a.name, note: a.note || '', added: true };
+    if (a.options && a.options.length) {
+      dish.options = a.options.map(function(o){ return { label: String(o.label), price: Math.max(0, +o.price || 0) }; });
+    } else if (a.price !== undefined && a.price !== null && a.price !== '') {
+      dish.price = Math.max(0, +a.price || 0);
+    }
+    if (a.flavours && a.flavours.length) dish.flavours = a.flavours.slice();
+    cat.groups[cat.groups.length - 1].items.push(dish);
+  });
+}
+function rebuildMenuFromOverrides(){
+  /* Repart du menu imprimé, puis réapplique les overrides : idempotent,
+     même appelé plusieurs fois (un plat ajouté n'est jamais doublé). */
+  MENU = JSON.parse(JSON.stringify(MENU_BASE));
+  if (MENU_OVERRIDES) applyMenuOverrides(MENU_OVERRIDES);
+  if (typeof buildMenuIndexes === 'function') buildMenuIndexes();
+}
+function loadMenuOverrides(timeoutMs){
+  /* Une lecture du nœud blueberry-menu-overrides, après authentification
+     anonyme. Applique les overrides en mémoire. Résout true si des
+     overrides ont été appliqués, false sinon (FAIL-OPEN : le menu
+     embarqué reste affiché). Ne rejette jamais. */
+  return new Promise(function(resolve){
+    var done = false;
+    function finish(v){ if (!done) { done = true; resolve(v); } }
+    var ms = timeoutMs || 8000;
+    setTimeout(function(){ finish(false); }, ms);
+    try {
+      if (typeof firebase === 'undefined' || typeof firebase.database !== 'function') { finish(false); return; }
+      var db;
+      try { db = (typeof getDb === 'function') ? getDb() : firebase.database(); }
+      catch (e) { finish(false); return; }
+      function read(){
+        db.ref('blueberry-menu-overrides').once('value').then(function(snap){
+          var val = snap.val();
+          if (val && typeof val === 'object') {
+            MENU_OVERRIDES = val;
+            rebuildMenuFromOverrides();
+            finish(true);
+          } else finish(false);
+        }).catch(function(){ finish(false); });
+      }
+      var auth = (firebase.auth && typeof firebase.auth === 'function') ? firebase.auth() : null;
+      if (!auth) { read(); return; }
+      if (auth.currentUser) { read(); return; }
+      var off = auth.onAuthStateChanged(function(user){
+        if (user) { try { off(); } catch (e) {} read(); }
+      });
+    } catch (e) { finish(false); }
+  });
+}
 
 function norm(s){ return String(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase(); }
 function priceText(it){
@@ -3053,6 +3222,10 @@ window.__BB_STATUS_PROMISE.then(function(){
   if (window.__BLUEBERRY_DISABLED) { window.__BB_SHOW_SUSPENDED(); return; }
   document.getElementById("menuSearch").addEventListener("input", function(e){ renderMenu(e.target.value); });
   renderMenu("");
+  /* Overrides du menu (ajout/modif/suppression par le propriétaire) :
+     le menu imprimé s'affiche d'abord, puis se met à jour si des
+     overrides existent. Échec de lecture = menu imprimé, inchangé. */
+  initMenuFirebase().then(function(){ return loadMenuOverrides(); }).then(function(applied){ if (applied) renderMenu(""); });
 });
 </script>
 </body>
