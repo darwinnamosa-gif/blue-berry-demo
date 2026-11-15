@@ -635,6 +635,189 @@
   .bb-since{ font-size:.30em; font-weight:800; letter-spacing:.34em; color:#2E4A6B; text-align:right; margin-top:.45em; white-space:nowrap; }
   .bb-cluster{ height:1.5em; width:auto; flex-shrink:0; }
 
+      /* ---------- Gérer le menu (2026-11-15) ---------- */
+      .manage { margin-top: 22px; }
+      .manage-toggle {
+        width: 100%; display: flex; align-items: center; gap: 10px;
+        background: #FFFFFF; border: 1px solid var(--line-dark); border-radius: 12px;
+        color: var(--muted); padding: 12px 16px; min-height: 48px;
+        font-size: 15.5px; font-weight: 900; text-align: start;
+      }
+      .manage-toggle .chev { margin-inline-start: auto; transition: transform 0.2s; font-size: 13px; }
+      .manage.open .manage-toggle .chev { transform: rotate(180deg); }
+      .manage-body { display: none; margin-top: 12px; }
+      .manage.open .manage-body { display: block; }
+      .manage-search { display: none; margin-top: 12px; }
+      .manage.open .manage-search { display: block; }
+      .manage-search input {
+        width: 100%; height: 46px; padding: 10px 16px;
+        font-size: 15.5px; font-family: inherit; font-weight: 600;
+        border: 2px solid var(--line); border-radius: 999px;
+        background: #fff; color: var(--ink);
+      }
+      .manage-search input:focus { outline: none; border-color: var(--yellow); box-shadow: 0 0 0 3px rgba(119,163,220,.35); }
+      #manageCount { font-size: 13.5px; font-weight: 800; color: var(--dim); }
+      .manage-add-btn {
+        width: 100%; min-height: 48px; margin-bottom: 14px;
+        border: none; cursor: pointer; border-radius: 999px;
+        background: var(--yellow); color: #22303F;
+        font-size: 16px; font-weight: 900; font-family: inherit;
+      }
+      .manage-add-btn:active { filter: brightness(.96); }
+      .manage-cat { margin-bottom: 16px; }
+      .manage-cat:last-child { margin-bottom: 0; }
+      .manage-cat-name { font-size: 15px; font-weight: 900; color: var(--black); margin-bottom: 7px; }
+      .manage-row {
+        display: flex; align-items: center; gap: 10px;
+        padding: 7px 8px 7px 12px; margin-bottom: 6px;
+        background: #FFFFFF; border: 1px solid var(--line); border-radius: 10px;
+      }
+      .manage-info { flex: 1; min-width: 0; }
+      .manage-name { font-size: 15.5px; font-weight: 700; overflow-wrap: break-word; }
+      .manage-meta { font-size: 12.5px; color: var(--dim); font-weight: 600; margin-top: 2px; }
+      .manage-added { color: #5B9BD5; font-weight: 800; }
+      .manage-actions { display: flex; gap: 6px; flex-shrink: 0; }
+      .manage-btn {
+        border-radius: 999px; padding: 7px 12px; min-height: 38px; flex-shrink: 0;
+        font-size: 13.5px; font-weight: 900; border: 1px solid; white-space: nowrap;
+        font-family: inherit; cursor: pointer; background: #fff;
+      }
+      .manage-btn.edit { color: #8A6D1B; border-color: rgba(242,183,5,.7); background: #FFF6DB; }
+      .manage-btn.del { color: var(--red); border-color: rgba(220,38,38,.6); background: var(--red-soft); }
+      .manage-no-results { text-align: center; font-weight: 800; color: var(--muted); padding: 26px 12px; }
+      @media (max-width: 560px){
+        .manage-row { flex-wrap: wrap; }
+        .manage-actions { width: 100%; }
+        .manage-btn { flex: 1; }
+      }
+      /* ---------- Modales Gérer le menu ---------- */
+      .bb-modal-overlay {
+        display: none; position: fixed; inset: 0; z-index: 200;
+        background: rgba(34,48,63,.55);
+        align-items: center; justify-content: center; padding: 20px 16px;
+      }
+      .bb-modal-overlay.show { display: flex; }
+      .bb-modal {
+        background: #FFFFFF; color: #22303F; border-radius: 18px;
+        width: 100%; max-width: 440px; padding: 22px 20px;
+        box-shadow: 0 18px 50px rgba(34,48,63,.3);
+        font-family: inherit;
+      }
+      .bb-modal h3 { margin: 0 0 16px; font-size: 19px; font-weight: 900; }
+      .bb-modal-text { font-size: 15px; line-height: 1.6; color: #22303F; margin: 0 0 18px; }
+      .bb-field { margin-bottom: 14px; }
+      .bb-field label { display: block; font-size: 13.5px; font-weight: 800; color: #5B6B7F; margin-bottom: 6px; }
+      .bb-field input, .bb-field select {
+        width: 100%; min-height: 48px; padding: 10px 14px;
+        font-size: 16px; font-family: inherit; font-weight: 600; color: #22303F;
+        border: 2px solid #D5E2F0; border-radius: 12px; background: #fff;
+      }
+      .bb-field input:focus, .bb-field select:focus { outline: none; border-color: #77A3DC; box-shadow: 0 0 0 3px rgba(119,163,220,.3); }
+      .bb-modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 18px; }
+      .bb-btn {
+        min-height: 48px; padding: 10px 20px; border-radius: 999px;
+        font-size: 15.5px; font-weight: 900; font-family: inherit; cursor: pointer;
+      }
+      .bb-btn.primary { border: none; background: #F2B705; color: #22303F; }
+      .bb-btn.ghost { border: 2px solid #D5E2F0; background: #fff; color: #22303F; }
+      .bb-btn.danger { border: none; background: #DC2626; color: #fff; }
+      /* ---------- Toast Gérer le menu ---------- */
+      .bb-toast {
+        display: none; position: fixed; left: 50%; bottom: 24px; z-index: 300;
+        transform: translateX(-50%);
+        background: #22303F; color: #fff; border: 2px solid #F2B705;
+        border-radius: 999px; padding: 12px 22px;
+        font-size: 15px; font-weight: 800; font-family: inherit;
+        box-shadow: 0 10px 30px rgba(34,48,63,.35);
+        max-width: calc(100vw - 32px); text-align: center;
+      }
+      .bb-toast.show { display: block; }
+
+      /* ---------- Tiroir latéral + vues (2026-11-15) : comptoir propre, commandes uniquement ---------- */
+      .drawer-btn {
+        display: inline-flex; align-items: center; justify-content: center;
+        width: 44px; height: 44px; flex-shrink: 0; cursor: pointer;
+        border: 2px solid rgba(255,255,255,.4); border-radius: 12px;
+        background: transparent; color: #FFFFFF; font-size: 22px; line-height: 1; padding: 0;
+      }
+      .drawer-btn:active { background: rgba(255,255,255,.14); }
+      /* Fix 2026-11-15 (Karim : « menu jat foq logo ») — le ☰ est sur la
+         MÊME ligne que le logo, centré verticalement avec lui, jamais
+         au-dessus. Sur mobile la marque passe en ligne avec retour à la
+         ligne : [☰ + logo] sur la 1re ligne, le sous-titre en dessous. */
+      @media (max-width:560px){
+        .brand{ flex-direction:row; flex-wrap:wrap; align-items:center; gap:6px 10px; }
+        .brand-sub{ width:100%; }
+      }
+      /* Vues du comptoir : commandes seules par défaut ; chaque outil est une vue pleine */
+      main.layout[data-view="orders"] #availSection,
+      main.layout[data-view="orders"] #statsSection,
+      main.layout[data-view="orders"] #manageSection { display: none !important; }
+      main.layout[data-view="stats"] #tabs,
+      main.layout[data-view="stats"] #ordersList,
+      main.layout[data-view="stats"] #emptyState,
+      main.layout[data-view="stats"] #doneSection,
+      main.layout[data-view="stats"] .bills,
+      main.layout[data-view="stats"] #availSection,
+      main.layout[data-view="stats"] #manageSection { display: none !important; }
+      main.layout[data-view="avail"] #tabs,
+      main.layout[data-view="avail"] #ordersList,
+      main.layout[data-view="avail"] #emptyState,
+      main.layout[data-view="avail"] #doneSection,
+      main.layout[data-view="avail"] .bills,
+      main.layout[data-view="avail"] #statsSection,
+      main.layout[data-view="avail"] #manageSection { display: none !important; }
+      main.layout[data-view="manage"] #tabs,
+      main.layout[data-view="manage"] #ordersList,
+      main.layout[data-view="manage"] #emptyState,
+      main.layout[data-view="manage"] #doneSection,
+      main.layout[data-view="manage"] .bills,
+      main.layout[data-view="manage"] #statsSection,
+      main.layout[data-view="manage"] #availSection { display: none !important; }
+      /* Retour aux commandes (en haut de chaque vue outil) */
+      .bb-back {
+        display: inline-flex; align-items: center; min-height: 44px;
+        margin-bottom: 10px; padding: 6px 4px;
+        border: none; background: none; cursor: pointer;
+        color: #2E4A6B; font-size: 16px; font-weight: 900; font-family: inherit;
+      }
+      .bb-back:active { color: #22303F; }
+      /* Tiroir latéral gauche */
+      .bb-drawer-backdrop {
+        position: fixed; inset: 0; z-index: 140;
+        background: rgba(34,48,63,.55);
+      }
+      .bb-drawer-backdrop[hidden] { display: none; }
+      .bb-drawer {
+        position: fixed; top: 0; bottom: 0; left: 0; z-index: 150;
+        width: min(280px, 85vw);
+        background: #22303F; color: #F4F8FC;
+        transform: translateX(-105%); visibility: hidden;
+        transition: transform .25s ease, visibility 0s linear .25s;
+        display: flex; flex-direction: column; padding: 18px 0 12px;
+        box-shadow: 6px 0 30px rgba(0,0,0,.35);
+      }
+      .bb-drawer.open { transform: none; visibility: visible; transition: transform .25s ease; }
+      .bb-drawer-head {
+        display: flex; align-items: center; justify-content: space-between; gap: 10px;
+        padding: 0 14px 14px; margin-bottom: 10px;
+        border-bottom: 1px solid rgba(244,248,252,.16);
+      }
+      .bb-drawer-logo .bb-lockup { font-size: 20px; }
+      .bb-drawer-logo .bb-since { color: #B9C9E2; }
+      .bb-drawer-close {
+        width: 40px; height: 40px; flex-shrink: 0; cursor: pointer;
+        border: 2px solid rgba(244,248,252,.3); border-radius: 999px;
+        background: transparent; color: #F4F8FC; font-size: 17px; line-height: 1;
+      }
+      .bb-drawer-item {
+        display: flex; align-items: center; gap: 12px; width: 100%;
+        min-height: 56px; padding: 10px 18px; cursor: pointer;
+        border: none; border-left: 4px solid transparent; background: none;
+        color: #F4F8FC; font-size: 16.5px; font-weight: 800; font-family: inherit; text-align: start;
+      }
+      .bb-drawer-item:active { background: rgba(244,248,252,.08); border-left-color: #F2B705; }
+
 </style>
   </head>
   <body>
@@ -672,6 +855,7 @@
     <div id="appWrap" hidden>
     <header class="topbar">
       <div class="brand">
+    <button class="drawer-btn" id="drawerBtn" type="button" aria-label="Ouvrir le menu">☰</button>
         <div class="brand-lockup"><span class="bb-lockup"><span class="bb-word"><span class="bb-name">BLUE BERRY</span><span class="bb-since">DEPUIS 1998</span></span><svg class="bb-cluster" viewBox="0 0 120 118" aria-hidden="true"><path d="M60 36 C 76 24, 90 16, 95 5" fill="none" stroke="#77A3DC" stroke-width="5" stroke-linecap="round"/><path d="M52 38 Q 50 22, 64 16 Q 66 30, 52 38 Z" fill="#77A3DC" stroke="#fff" stroke-width="1.5"/><g fill="#77A3DC" stroke="#fff" stroke-width="2"><circle cx="60" cy="34" r="10"/><circle cx="42" cy="48" r="11"/><circle cx="78" cy="48" r="11"/><circle cx="27" cy="64" r="11"/><circle cx="57" cy="64" r="12"/><circle cx="87" cy="64" r="11"/><circle cx="41" cy="82" r="11"/><circle cx="71" cy="82" r="11"/><circle cx="56" cy="98" r="11"/><circle cx="30" cy="46" r="8"/><circle cx="90" cy="46" r="8"/></g><g fill="#fff"><circle cx="56" cy="30" r="1.8"/><circle cx="38" cy="44" r="1.8"/><circle cx="74" cy="44" r="1.8"/><circle cx="23" cy="60" r="1.8"/><circle cx="53" cy="60" r="1.8"/><circle cx="83" cy="60" r="1.8"/><circle cx="37" cy="78" r="1.8"/><circle cx="67" cy="78" r="1.8"/><circle cx="52" cy="94" r="1.8"/></g><circle cx="106" cy="14" r="9" fill="#fff" stroke="#77A3DC" stroke-width="2"/><text x="106" y="18" font-size="11" font-weight="700" text-anchor="middle" fill="#77A3DC" font-family="system-ui,Arial,sans-serif">R</text></svg></span></div>
         <div class="brand-sub">Comptoir — Commandes en direct<span class="brand-loc"> · Hay Riad, Rabat</span></div>
       </div>
@@ -685,6 +869,17 @@
         <button class="lock-btn" id="lockBtn" type="button" title="Verrouiller" aria-label="Verrouiller le comptoir">🔒</button>
       </div>
     </header>
+    <div class="bb-drawer-backdrop" id="drawerBackdrop" hidden></div>
+    <nav class="bb-drawer" id="drawerNav" aria-label="Menu du comptoir">
+      <div class="bb-drawer-head">
+        <div class="bb-drawer-logo"><span class="bb-lockup"><span class="bb-word"><span class="bb-name">BLUE BERRY</span><span class="bb-since">DEPUIS 1998</span></span><svg class="bb-cluster" viewBox="0 0 120 118" aria-hidden="true"><path d="M60 36 C 76 24, 90 16, 95 5" fill="none" stroke="#77A3DC" stroke-width="5" stroke-linecap="round"/><path d="M52 38 Q 50 22, 64 16 Q 66 30, 52 38 Z" fill="#77A3DC" stroke="#fff" stroke-width="1.5"/><g fill="#77A3DC" stroke="#fff" stroke-width="2"><circle cx="60" cy="34" r="10"/><circle cx="42" cy="48" r="11"/><circle cx="78" cy="48" r="11"/><circle cx="27" cy="64" r="11"/><circle cx="57" cy="64" r="12"/><circle cx="87" cy="64" r="11"/><circle cx="41" cy="82" r="11"/><circle cx="71" cy="82" r="11"/><circle cx="56" cy="98" r="11"/><circle cx="30" cy="46" r="8"/><circle cx="90" cy="46" r="8"/></g><g fill="#fff"><circle cx="56" cy="30" r="1.8"/><circle cx="38" cy="44" r="1.8"/><circle cx="74" cy="44" r="1.8"/><circle cx="23" cy="60" r="1.8"/><circle cx="53" cy="60" r="1.8"/><circle cx="83" cy="60" r="1.8"/><circle cx="37" cy="78" r="1.8"/><circle cx="67" cy="78" r="1.8"/><circle cx="52" cy="94" r="1.8"/></g><circle cx="106" cy="14" r="9" fill="#fff" stroke="#77A3DC" stroke-width="2"/><text x="106" y="18" font-size="11" font-weight="700" text-anchor="middle" fill="#77A3DC" font-family="system-ui,Arial,sans-serif">R</text></svg></span></div>
+        <button class="bb-drawer-close" id="drawerClose" type="button" aria-label="Fermer le menu">✕</button>
+      </div>
+      <button class="bb-drawer-item" type="button" data-view-link="stats">📊 Statistiques</button>
+      <button class="bb-drawer-item" type="button" data-view-link="avail">🍽️ Disponibilité des plats</button>
+      <button class="bb-drawer-item" type="button" data-view-link="manage">✏️ Gérer le menu</button>
+    </nav>
+
 
     <div class="config-banner" id="configBanner" hidden>
       <strong>Firebase non configuré.</strong>
@@ -693,7 +888,7 @@
       En attendant, aucune commande n'est affichée ici.
     </div>
 
-    <main class="layout">
+    <main class="layout" data-view="orders">
       <section aria-label="Commandes">
         <nav class="tabs" id="tabs" aria-label="Filtrer les commandes"></nav>
         <div class="orders-list" id="ordersList"></div>
@@ -714,6 +909,7 @@
         </section>
 
         <section class="avail" id="availSection">
+          <button class="bb-back" type="button">← Commandes</button>
           <button class="avail-toggle" id="availToggle" type="button">
             Disponibilité des plats <span id="availCount"></span>
             <span class="chev">▼</span>
@@ -722,7 +918,21 @@
           <div class="avail-body" id="availBody"></div>
         </section>
 
+        <section class="manage" id="manageSection">
+          <button class="bb-back" type="button">← Commandes</button>
+          <button class="manage-toggle" id="manageToggle" type="button">
+            ✏️ Gérer le menu <span id="manageCount"></span>
+            <span class="chev">▼</span>
+          </button>
+          <div class="manage-search" id="manageSearchWrap"><input id="manageSearch" type="search" placeholder="Rechercher un plat…" aria-label="Rechercher un plat" autocomplete="off" /></div>
+          <div class="manage-body" id="manageBody">
+            <button class="manage-add-btn" id="manageAddBtn" type="button">＋ Ajouter un plat</button>
+            <div id="manageList"></div>
+          </div>
+        </section>
+
         <section class="stats" id="statsSection">
+          <button class="bb-back" type="button">← Commandes</button>
           <button class="stats-toggle" id="statsToggle" type="button">
             📊 Statistiques
             <span class="chev">▼</span>
@@ -765,6 +975,44 @@
 
     </div>
 
+    <!-- Modales Gérer le menu -->
+    <div class="bb-modal-overlay" id="editModal" role="dialog" aria-modal="true" aria-labelledby="editModalTitle">
+      <div class="bb-modal">
+        <h3 id="editModalTitle">Modifier le plat</h3>
+        <div class="bb-field"><label for="editName">Nom du plat</label><input id="editName" type="text" autocomplete="off" /></div>
+        <div class="bb-field"><label for="editSection">Section</label><select id="editSection"></select></div>
+        <div id="editPriceFields"></div>
+        <div class="bb-modal-actions">
+          <button type="button" class="bb-btn ghost" id="editCancel">Annuler</button>
+          <button type="button" class="bb-btn primary" id="editSave">Enregistrer</button>
+        </div>
+      </div>
+    </div>
+    <div class="bb-modal-overlay" id="addModal" role="dialog" aria-modal="true" aria-labelledby="addModalTitle">
+      <div class="bb-modal">
+        <h3 id="addModalTitle">Ajouter un plat</h3>
+        <div class="bb-field"><label for="addName">Nom du plat</label><input id="addName" type="text" autocomplete="off" /></div>
+        <div class="bb-field"><label for="addSection">Section</label><select id="addSection"></select></div>
+        <div class="bb-field"><label for="addPrice">Prix (DH)</label><input id="addPrice" type="number" min="0" step="0.5" inputmode="decimal" /></div>
+        <div class="bb-field"><label for="addNote">Note (facultatif)</label><input id="addNote" type="text" autocomplete="off" /></div>
+        <div class="bb-modal-actions">
+          <button type="button" class="bb-btn ghost" id="addCancel">Annuler</button>
+          <button type="button" class="bb-btn primary" id="addSave">Ajouter</button>
+        </div>
+      </div>
+    </div>
+    <div class="bb-modal-overlay" id="deleteModal" role="dialog" aria-modal="true" aria-labelledby="deleteModalTitle">
+      <div class="bb-modal">
+        <h3 id="deleteModalTitle">Supprimer « <span id="deleteDishName"></span> » ?</h3>
+        <p class="bb-modal-text">Supprimer ce plat du menu ? Il ne sera plus visible ni dans le menu ni dans les commandes.</p>
+        <div class="bb-modal-actions">
+          <button type="button" class="bb-btn ghost" id="deleteCancel">Annuler</button>
+          <button type="button" class="bb-btn danger" id="deleteConfirm">Supprimer</button>
+        </div>
+      </div>
+    </div>
+    <div class="bb-toast" id="manageToast" role="status" aria-live="polite"></div>
+
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
@@ -772,7 +1020,8 @@
       /* ============================================================
          FIREBASE_CONFIG — projet Firebase partagé (thon-3s-orders).
          Blue Berry n'utilise QUE les nœuds blueberry-orders,
-         blueberry-availability et blueberry-cancelled.
+         blueberry-availability, blueberry-cancelled
+         et blueberry-menu-overrides.
          JAMAIS un autre nœud.
          ============================================================ */
       var FIREBASE_CONFIG = {
@@ -3503,13 +3752,412 @@
     ]
   }
 ];
+      /* MENU_BASE = menu imprimé, jamais modifié : les overrides du propriétaire
+         (blueberry-menu-overrides) sont appliqués par-dessus au chargement. */
+      var MENU_BASE = JSON.parse(JSON.stringify(MENU));
       var DISH_BY_ID = {};
       var DISH_BY_NAME = {};
+      function buildMenuIndexes(){
+        DISH_BY_ID = {};
+        DISH_BY_NAME = {};
       MENU.forEach(function(c){ c.groups.forEach(function(g){ g.items.forEach(function(i){
         DISH_BY_ID[i.id] = i;
         if (DISH_BY_NAME[i.name] === undefined) DISH_BY_NAME[i.name] = i;
         else if (DISH_BY_NAME[i.name]) DISH_BY_NAME[i.name] = null;
       }); }); });
+      }
+      buildMenuIndexes();
+/* ---------- Gestion du menu par le propriétaire (blueberry-menu-overrides) ----------
+   Le propriétaire modifie le menu depuis le comptoir (ajouter / modifier /
+   supprimer un plat) sans toucher au code : les modifications vivent dans
+   Firebase, nœud blueberry-menu-overrides :
+     deleted/<dishId> : true
+     edited/<dishId>  : plat complet {name, note, price} ou {name, note,
+                        options:[{label, price}]} (+ flavours si applicable,
+                        + sectionId seulement si le plat change de section)
+     added/<dishId>   : plat complet + sectionId (id Firebase-safe,
+                        ex. added-<timestamp>-<aléatoire>)
+   Le menu embarqué (menu.json) reste la base imprimée : les overrides ne
+   font que le modifier en mémoire, au chargement. FAIL-OPEN : si la
+   lecture échoue (pas de réseau, Firebase indisponible), le menu
+   embarqué s'affiche tel quel. */
+var MENU_OVERRIDES = null; /* dernier objet overrides chargé (ou null) */
+function applyMenuOverrides(overrides){
+  if (!overrides || typeof overrides !== 'object') return;
+  var del = overrides.deleted || {};
+  var edt = overrides.edited || {};
+  var add = overrides.added || {};
+  var moves = [];
+  MENU.forEach(function(cat){
+    cat.groups.forEach(function(grp){
+      var kept = [];
+      grp.items.forEach(function(it){
+        if (del[it.id]) return; /* supprimé par le propriétaire */
+        var e = edt[it.id];
+        if (e && typeof e === 'object' && e.name) {
+          var rep = { id: it.id, name: e.name, note: e.note || '' };
+          if (e.options && e.options.length) {
+            rep.options = e.options.map(function(o){ return { label: String(o.label), price: Math.max(0, +o.price || 0) }; });
+          } else if (e.price !== undefined && e.price !== null && e.price !== '') {
+            rep.price = Math.max(0, +e.price || 0);
+          }
+          if (e.flavours && e.flavours.length) rep.flavours = e.flavours.slice();
+          if (e.assumed) rep.assumed = true;
+          if (e.sectionId && e.sectionId !== cat.id) { moves.push({ dish: rep, sectionId: e.sectionId }); return; }
+          kept.push(rep);
+        } else {
+          kept.push(it);
+        }
+      });
+      grp.items = kept;
+    });
+  });
+  moves.forEach(function(m){
+    for (var i = 0; i < MENU.length; i++) {
+      if (MENU[i].id === m.sectionId && MENU[i].groups.length) {
+        MENU[i].groups[MENU[i].groups.length - 1].items.push(m.dish);
+        break;
+      }
+    }
+  });
+  Object.keys(add).forEach(function(id){
+    var a = add[id];
+    if (!a || typeof a !== 'object' || !a.name || !a.sectionId) return;
+    var cat = null;
+    for (var i = 0; i < MENU.length; i++) if (MENU[i].id === a.sectionId) { cat = MENU[i]; break; }
+    if (!cat || !cat.groups.length) return;
+    var dish = { id: id, name: a.name, note: a.note || '', added: true };
+    if (a.options && a.options.length) {
+      dish.options = a.options.map(function(o){ return { label: String(o.label), price: Math.max(0, +o.price || 0) }; });
+    } else if (a.price !== undefined && a.price !== null && a.price !== '') {
+      dish.price = Math.max(0, +a.price || 0);
+    }
+    if (a.flavours && a.flavours.length) dish.flavours = a.flavours.slice();
+    cat.groups[cat.groups.length - 1].items.push(dish);
+  });
+}
+function rebuildMenuFromOverrides(){
+  /* Repart du menu imprimé, puis réapplique les overrides : idempotent,
+     même appelé plusieurs fois (un plat ajouté n'est jamais doublé). */
+  MENU = JSON.parse(JSON.stringify(MENU_BASE));
+  if (MENU_OVERRIDES) applyMenuOverrides(MENU_OVERRIDES);
+  if (typeof buildMenuIndexes === 'function') buildMenuIndexes();
+}
+function loadMenuOverrides(timeoutMs){
+  /* Une lecture du nœud blueberry-menu-overrides, après authentification
+     anonyme. Applique les overrides en mémoire. Résout true si des
+     overrides ont été appliqués, false sinon (FAIL-OPEN : le menu
+     embarqué reste affiché). Ne rejette jamais. */
+  return new Promise(function(resolve){
+    var done = false;
+    function finish(v){ if (!done) { done = true; resolve(v); } }
+    var ms = timeoutMs || 8000;
+    setTimeout(function(){ finish(false); }, ms);
+    try {
+      if (typeof firebase === 'undefined' || typeof firebase.database !== 'function') { finish(false); return; }
+      var db;
+      try { db = (typeof getDb === 'function') ? getDb() : firebase.database(); }
+      catch (e) { finish(false); return; }
+      function read(){
+        db.ref('blueberry-menu-overrides').once('value').then(function(snap){
+          var val = snap.val();
+          if (val && typeof val === 'object') {
+            MENU_OVERRIDES = val;
+            rebuildMenuFromOverrides();
+            finish(true);
+          } else finish(false);
+        }).catch(function(){ finish(false); });
+      }
+      var auth = (firebase.auth && typeof firebase.auth === 'function') ? firebase.auth() : null;
+      if (!auth) { read(); return; }
+      if (auth.currentUser) { read(); return; }
+      var off = auth.onAuthStateChanged(function(user){
+        if (user) { try { off(); } catch (e) {} read(); }
+      });
+    } catch (e) { finish(false); }
+  });
+}
+/* ---------- Gérer le menu (comptoir, après déverrouillage PIN) ----------
+   Le propriétaire ajoute / modifie / supprime un plat depuis le comptoir :
+   les écritures vont dans blueberry-menu-overrides (jamais dans menu.json,
+   jamais dans le code). Le menu embarqué reste la base imprimée. */
+var manageQuery = "";
+var manageEditingId = null;   /* id du plat en cours de modification */
+var manageDeletingId = null;  /* id du plat en cours de suppression */
+var overridesRef = null;      /* db.ref('blueberry-menu-overrides'), après auth */
+function managePriceText(it){
+  if (it.options) {
+    var ps = it.options.map(function(o){ return o.price; });
+    return Math.min.apply(null, ps) + " \u2013 " + Math.max.apply(null, ps) + " DH";
+  }
+  return (it.price !== undefined && it.price !== null ? it.price : "") + " DH";
+}
+function findManageDish(id){
+  var found = null;
+  MENU.forEach(function(cat){ cat.groups.forEach(function(grp){ grp.items.forEach(function(it){
+    if (it.id === id) found = { dish: it, sectionId: cat.id, groupName: grp.name || "" };
+  }); }); });
+  return found;
+}
+function renderMenuManage(){
+  var q = normAvail(manageQuery).trim();
+  var html = "";
+  var total = 0, shown = 0;
+  MENU.forEach(function(cat){
+    var rows = "";
+    cat.groups.forEach(function(grp){
+      grp.items.forEach(function(it){
+        total++;
+        if (q && normAvail(it.name).indexOf(q) === -1) return;
+        shown++;
+        rows += '<div class="manage-row">' +
+          '<div class="manage-info"><div class="manage-name" dir="auto">' + esc(it.name) + '</div>' +
+          '<div class="manage-meta">' + esc(cat.fr) + (grp.name ? ' \u00b7 ' + esc(grp.name) : '') + ' \u00b7 ' + esc(managePriceText(it)) + (it.added ? ' \u00b7 <span class="manage-added">Nouveau</span>' : '') + '</div></div>' +
+          '<div class="manage-actions">' +
+          '<button type="button" class="manage-btn edit" data-edit="' + esc(it.id) + '">\u270f\ufe0f Modifier</button>' +
+          '<button type="button" class="manage-btn del" data-del="' + esc(it.id) + '">\ud83d\uddd1\ufe0f Supprimer</button>' +
+          '</div></div>';
+      });
+    });
+    if (rows) html += '<div class="manage-cat"><div class="manage-cat-name">' + esc(cat.fr) + '</div>' + rows + '</div>';
+  });
+  var list = document.getElementById("manageList");
+  if (list) list.innerHTML = html || '<div class="manage-no-results">Aucun plat trouvé pour « ' + esc(manageQuery.trim()) + ' ».</div>';
+  var cnt = document.getElementById("manageCount");
+  if (cnt) cnt.textContent = q ? ("(" + shown + " / " + total + " plats)") : ("(" + total + " plats)");
+}
+function manageToast(msg){
+  var t = document.getElementById("manageToast");
+  if (!t) return;
+  t.textContent = msg;
+  t.classList.add("show");
+  clearTimeout(t._to);
+  t._to = setTimeout(function(){ t.classList.remove("show"); }, 3000);
+}
+function sectionOptionsHTML(selectedId){
+  return MENU.map(function(cat){
+    return '<option value="' + esc(cat.id) + '"' + (cat.id === selectedId ? ' selected' : '') + '>' + esc(cat.fr) + '</option>';
+  }).join("");
+}
+function parseManagePrice(raw){
+  if (raw === undefined || raw === null) return null;
+  var v = parseFloat(String(raw).replace(",", "."));
+  if (!isFinite(v) || v < 0) return null;
+  return Math.round(v * 100) / 100;
+}
+function closestAttr(el, attr){
+  while (el && el !== document) {
+    if (el.getAttribute && el.getAttribute(attr) !== null) return el;
+    el = el.parentNode;
+  }
+  return null;
+}
+function showModal(id){
+  var m = document.getElementById(id);
+  if (m) m.classList.add("show");
+}
+function hideModals(){
+  ["editModal", "addModal", "deleteModal"].forEach(function(id){
+    var m = document.getElementById(id);
+    if (m) m.classList.remove("show");
+  });
+  manageEditingId = null;
+  manageDeletingId = null;
+}
+function openEditModal(id){
+  var found = findManageDish(id);
+  if (!found) return;
+  manageEditingId = id;
+  var it = found.dish;
+  document.getElementById("editName").value = it.name;
+  document.getElementById("editSection").innerHTML = sectionOptionsHTML(found.sectionId);
+  var box = document.getElementById("editPriceFields");
+  box.innerHTML = "";
+  if (it.options) {
+    it.options.forEach(function(o, i){
+      var row = document.createElement("div");
+      row.className = "bb-field";
+      row.innerHTML = '<label>Prix \u2014 ' + esc(o.label) + ' (DH)</label><input type="number" min="0" step="0.5" inputmode="decimal" value="' + o.price + '" />';
+      box.appendChild(row);
+    });
+  } else {
+    var row = document.createElement("div");
+    row.className = "bb-field";
+    row.innerHTML = '<label>Prix (DH)</label><input type="number" min="0" step="0.5" inputmode="decimal" value="' + (it.price !== undefined && it.price !== null ? it.price : "") + '" />';
+    box.appendChild(row);
+  }
+  showModal("editModal");
+}
+function saveEditModal(){
+  if (!overridesRef) { manageToast("Firebase indisponible \u2014 modification impossible pour l'instant."); return; }
+  var found = findManageDish(manageEditingId);
+  if (!found) { hideModals(); return; }
+  var it = found.dish;
+  var name = document.getElementById("editName").value.trim();
+  if (!name) { manageToast("Le nom du plat est obligatoire."); return; }
+  var sectionId = document.getElementById("editSection").value;
+  var obj = { name: name, note: it.note || "" };
+  var priceInputs = document.querySelectorAll("#editPriceFields input");
+  if (it.options) {
+    var opts = [];
+    for (var i = 0; i < it.options.length; i++) {
+      var p = parseManagePrice(priceInputs[i] ? priceInputs[i].value : "");
+      if (p === null) { manageToast("Indiquez un prix valide pour chaque option."); return; }
+      opts.push({ label: it.options[i].label, price: p });
+    }
+    obj.options = opts;
+  } else {
+    var p = parseManagePrice(priceInputs[0] ? priceInputs[0].value : "");
+    if (p === null) { manageToast("Indiquez un prix valide."); return; }
+    obj.price = p;
+  }
+  if (it.flavours) obj.flavours = it.flavours.slice();
+  if (it.assumed) obj.assumed = true;
+  if (sectionId !== found.sectionId) obj.sectionId = sectionId;
+  MENU_OVERRIDES = MENU_OVERRIDES || {};
+  if (it.added) {
+    obj.sectionId = sectionId; /* l'entrée added exige toujours sectionId */
+    overridesRef.child("added/" + it.id).set(obj);
+    (MENU_OVERRIDES.added = MENU_OVERRIDES.added || {})[it.id] = obj;
+  } else {
+    overridesRef.child("edited/" + it.id).set(obj);
+    (MENU_OVERRIDES.edited = MENU_OVERRIDES.edited || {})[it.id] = obj;
+  }
+  rebuildMenuFromOverrides();
+  renderAvailability();
+  renderMenuManage();
+  hideModals();
+  manageToast("Plat modifié.");
+}
+function openDeleteModal(id){
+  var found = findManageDish(id);
+  if (!found) return;
+  manageDeletingId = id;
+  document.getElementById("deleteDishName").textContent = found.dish.name;
+  showModal("deleteModal");
+}
+function confirmDeleteModal(){
+  if (!overridesRef) { manageToast("Firebase indisponible \u2014 suppression impossible pour l'instant."); return; }
+  var found = findManageDish(manageDeletingId);
+  if (!found) { hideModals(); return; }
+  var it = found.dish;
+  MENU_OVERRIDES = MENU_OVERRIDES || {};
+  if (it.added) {
+    overridesRef.child("added/" + it.id).remove();
+    if (MENU_OVERRIDES.added) delete MENU_OVERRIDES.added[it.id];
+  } else {
+    overridesRef.child("deleted/" + it.id).set(true);
+    (MENU_OVERRIDES.deleted = MENU_OVERRIDES.deleted || {})[it.id] = true;
+    if (MENU_OVERRIDES.edited) delete MENU_OVERRIDES.edited[it.id];
+    overridesRef.child("edited/" + it.id).remove();
+    if (availRef) availRef.child(it.id).remove();
+  }
+  rebuildMenuFromOverrides();
+  renderAvailability();
+  renderMenuManage();
+  hideModals();
+  manageToast("Plat supprimé du menu.");
+}
+function openAddModal(){
+  document.getElementById("addName").value = "";
+  document.getElementById("addSection").innerHTML = sectionOptionsHTML(MENU[0] ? MENU[0].id : "");
+  document.getElementById("addPrice").value = "";
+  document.getElementById("addNote").value = "";
+  showModal("addModal");
+}
+function saveAddModal(){
+  if (!overridesRef) { manageToast("Firebase indisponible \u2014 ajout impossible pour l'instant."); return; }
+  var name = document.getElementById("addName").value.trim();
+  if (!name) { manageToast("Le nom du plat est obligatoire."); return; }
+  var sectionId = document.getElementById("addSection").value;
+  var price = parseManagePrice(document.getElementById("addPrice").value);
+  if (price === null) { manageToast("Indiquez un prix valide."); return; }
+  var note = document.getElementById("addNote").value.trim();
+  var id = "added-" + Date.now() + "-" + Math.floor(Math.random() * 1000);
+  var obj = { name: name, note: note, price: price, sectionId: sectionId };
+  overridesRef.child("added/" + id).set(obj);
+  MENU_OVERRIDES = MENU_OVERRIDES || {};
+  (MENU_OVERRIDES.added = MENU_OVERRIDES.added || {})[id] = obj;
+  rebuildMenuFromOverrides();
+  renderAvailability();
+  renderMenuManage();
+  hideModals();
+  manageToast("Plat ajouté au menu.");
+}
+function wireMenuManage(){
+  document.getElementById("manageToggle").addEventListener("click", function () {
+    document.getElementById("manageSection").classList.toggle("open");
+  });
+  document.getElementById("manageSearch").addEventListener("input", function (e) {
+    manageQuery = e.target.value;
+    renderMenuManage();
+  });
+  document.getElementById("manageAddBtn").addEventListener("click", openAddModal);
+  document.getElementById("manageList").addEventListener("click", function (e) {
+    var ed = closestAttr(e.target, "data-edit");
+    var dl = ed ? null : closestAttr(e.target, "data-del");
+    if (ed) openEditModal(ed.getAttribute("data-edit"));
+    else if (dl) openDeleteModal(dl.getAttribute("data-del"));
+  });
+  document.getElementById("editSave").addEventListener("click", saveEditModal);
+  document.getElementById("editCancel").addEventListener("click", hideModals);
+  document.getElementById("addSave").addEventListener("click", saveAddModal);
+  document.getElementById("addCancel").addEventListener("click", hideModals);
+  document.getElementById("deleteConfirm").addEventListener("click", confirmDeleteModal);
+  document.getElementById("deleteCancel").addEventListener("click", hideModals);
+  ["editModal", "addModal", "deleteModal"].forEach(function(id){
+    document.getElementById(id).addEventListener("click", function (e) { if (e.target === this) hideModals(); });
+  });
+  renderMenuManage();
+}
+/* ---------- Tiroir latéral + vues (2026-11-15) ----------
+   Le comptoir ne montre que les commandes ; Statistiques, Disponibilité
+   des plats et Gérer le menu s'ouvrent comme des vues pleines depuis
+   le tiroir (☰, à gauche). « ← Commandes » revient aux commandes. */
+function showCounterView(name){
+  var main = document.querySelector("main.layout");
+  if (main) main.setAttribute("data-view", name);
+  var sections = { stats: "statsSection", avail: "availSection", manage: "manageSection" };
+  Object.keys(sections).forEach(function(k){
+    var sec = document.getElementById(sections[k]);
+    if (sec) sec.classList.toggle("open", k === name);
+  });
+  closeCounterDrawer();
+  window.scrollTo(0, 0);
+}
+function openCounterDrawer(){
+  var nav = document.getElementById("drawerNav");
+  var bd = document.getElementById("drawerBackdrop");
+  if (nav) nav.classList.add("open");
+  if (bd) bd.hidden = false;
+}
+function closeCounterDrawer(){
+  var nav = document.getElementById("drawerNav");
+  var bd = document.getElementById("drawerBackdrop");
+  if (nav) nav.classList.remove("open");
+  if (bd) bd.hidden = true;
+}
+function wireCounterDrawer(){
+  var btn = document.getElementById("drawerBtn");
+  if (btn) btn.addEventListener("click", openCounterDrawer);
+  var close = document.getElementById("drawerClose");
+  if (close) close.addEventListener("click", closeCounterDrawer);
+  var bd = document.getElementById("drawerBackdrop");
+  if (bd) bd.addEventListener("click", closeCounterDrawer);
+  var links = document.querySelectorAll("[data-view-link]");
+  for (var i = 0; i < links.length; i++) {
+    (function(el){
+      el.addEventListener("click", function(){ showCounterView(el.getAttribute("data-view-link")); });
+    })(links[i]);
+  }
+  var backs = document.querySelectorAll(".bb-back");
+  for (var j = 0; j < backs.length; j++) {
+    backs[j].addEventListener("click", function(){ showCounterView("orders"); });
+  }
+  document.addEventListener("keydown", function(e){
+    if (e.key === "Escape") closeCounterDrawer();
+  });
+}
       var availability = {};      // itemId -> bool (absent = disponible)
       var cancelled = {};       // id -> snapshot annulé (nœud blueberry-cancelled, historique stats)
       var availRef = null;
@@ -5096,6 +5744,10 @@
         ordersRef = db.ref("blueberry-orders");
         cancelledRef = db.ref("blueberry-cancelled");
         availRef = db.ref("blueberry-availability");
+        overridesRef = db.ref("blueberry-menu-overrides");
+        /* Overrides du menu (ajout/modif/suppression par le propriétaire) :
+           une lecture, puis le menu affiché est reconstruit. */
+        loadMenuOverrides().then(function(applied){ if (applied) { renderAvailability(); renderMenuManage(); } });
         renderAvailability();
         availRef.on("value", function (snap) {
           availability = snap.val() || {};
@@ -5289,6 +5941,8 @@
       document.getElementById("statsToggle").addEventListener("click", function () {
         document.getElementById("statsSection").classList.toggle("open");
       });
+      wireMenuManage();
+      wireCounterDrawer();
 
       /* ---------------- État initial : verrouillé ou déjà déverrouillé ---------------- */
       window.__BB_STATUS_PROMISE.then(function(){
