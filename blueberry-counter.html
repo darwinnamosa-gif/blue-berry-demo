@@ -760,6 +760,12 @@
       .manage-cat.dragging { opacity: .55; }
       .manage-cat.drag-insert-before { box-shadow: 0 -3px 0 0 #F2B705; }
       .manage-cat.drag-insert-after { box-shadow: 0 3px 0 0 #F2B705; }
+      /* ---------- Repli des catégories (Gérer le menu) ---------- */
+      .manage-cat.collapsed .manage-row { display: none; }
+      .manage-cat.collapsed .manage-cat-head { margin-bottom: 0; }
+      .manage-collapse-btn { display: inline-block; flex-shrink: 0; min-width: 44px; min-height: 44px; padding: 10px 12px; border: none; background: transparent; color: #5B6B7F; font-size: 16px; line-height: 1; cursor: pointer; font-family: inherit; border-radius: 8px; vertical-align: middle; }
+      .manage-collapse-btn:active { background: #F4F8FC; color: #22303F; }
+      .manage-cat-count { font-size: 13px; font-weight: 800; color: #5B6B7F; margin-inline-start: 6px; white-space: nowrap; }
 
       /* ---------- Tiroir latéral + vues (2026-11-15) : comptoir propre, commandes uniquement ---------- */
       .drawer-btn {
@@ -4268,12 +4274,15 @@ function renderMenuManage(){
     if (!rows && !MANAGE_DELETE_SECTIONS) return;
     var catPhoto = cat.photo ? '<img class="manage-cat-photo" src="' + esc(cat.photo) + '" alt="" onerror="this.remove()" />' : "";
     var catLabel = esc(cat.fr);
+    var catDishCount = 0;
+    cat.groups.forEach(function(grp){ catDishCount += grp.items.length; });
+    var catCollapsed = !!manageCollapsed[cat.id];
     if (cat.ar && cat.ar !== cat.fr) catLabel += ' \u00b7 <span dir="auto">' + esc(cat.ar) + '</span>';
     if (MANAGE_DELETE_SECTIONS) {
-      html += '<div class="manage-cat"><div class="manage-cat-head"><div class="manage-cat-name">' + dragGripHTML(cat) + catPhoto + catLabel + '</div>' +
+      html += '<div class="manage-cat' + (catCollapsed ? ' collapsed' : '') + '"><div class="manage-cat-head"><div class="manage-cat-name">' + dragGripHTML(cat) + catPhoto + catLabel + (catCollapsed ? manageCollapseCountHTML(catDishCount) : '') + manageCollapseBtnHTML(cat) + '</div>' +
         '<button type="button" class="manage-btn del manage-cat-del" data-delcat="' + esc(cat.id) + '" aria-label="Supprimer la catégorie ' + esc(cat.fr) + '">\ud83d\uddd1\ufe0f</button></div>' + rows + '</div>';
     } else {
-      html += '<div class="manage-cat"><div class="manage-cat-name">' + dragGripHTML(cat) + catPhoto + catLabel + '</div>' + rows + '</div>';
+      html += '<div class="manage-cat' + (catCollapsed ? ' collapsed' : '') + '"><div class="manage-cat-name">' + dragGripHTML(cat) + catPhoto + catLabel + (catCollapsed ? manageCollapseCountHTML(catDishCount) : '') + manageCollapseBtnHTML(cat) + '</div>' + rows + '</div>';
     }
   });
   var list = document.getElementById("manageList");
@@ -4710,6 +4719,39 @@ function commitSectionOrder(orderedIds){
   renderAvailability();
   renderMenuManage();
 }
+var MANAGE_COLLAPSE_KEY = 'manage-collapsed-blueberry-menu-overrides'; /* clé localStorage de l'état replié, par client */
+var MANAGE_SECTION_COLLAPSE = true; /* bouton de repli affiché (opt-in du port) */
+function loadManageCollapsed(){
+  /* État replié par catégorie, local au téléphone (localStorage) :
+     survit au rechargement, ne touche jamais Firebase. Une section
+     supprimée puis recréée a un nouvel id : sa clé orpheline ne
+     correspond plus à rien et la section repart dépliée. */
+  var out = {};
+  try {
+    var raw = (window.localStorage) ? window.localStorage.getItem(MANAGE_COLLAPSE_KEY) : null;
+    var parsed = raw ? JSON.parse(raw) : null;
+    if (parsed && typeof parsed === 'object') out = parsed;
+  } catch (err) { out = {}; }
+  return out;
+}
+function saveManageCollapsed(){
+  try { if (window.localStorage) window.localStorage.setItem(MANAGE_COLLAPSE_KEY, JSON.stringify(manageCollapsed)); } catch (err) {}
+}
+function toggleManageCollapsed(id){
+  if (!id) return;
+  if (manageCollapsed[id]) delete manageCollapsed[id];
+  else manageCollapsed[id] = true;
+  saveManageCollapsed();
+  renderMenuManage();
+}
+function manageCollapseBtnHTML(cat){
+  var collapsed = !!manageCollapsed[cat.id];
+  return '<button type="button" class="manage-collapse-btn" data-collapsecat="' + esc(cat.id) + '" aria-label="' + esc((collapsed ? 'Déplier la catégorie ' : 'Replier la catégorie ') + cat.fr) + '" aria-expanded="' + (collapsed ? 'false' : 'true') + '">' + (collapsed ? '\u25b8' : '\u25be') + '</button>';
+}
+function manageCollapseCountHTML(count){
+  return ' <span class="manage-cat-count">(' + count + ' plat' + (count > 1 ? 's' : '') + ')</span>';
+}
+var manageCollapsed = loadManageCollapsed();
 function wireMenuManage(){
   document.getElementById("manageToggle").addEventListener("click", function () {
     document.getElementById("manageSection").classList.toggle("open");
@@ -4730,6 +4772,8 @@ function wireMenuManage(){
     });
   });
   document.getElementById("manageList").addEventListener("click", function (e) {
+    var cc = closestAttr(e.target, "data-collapsecat");
+    if (cc) { toggleManageCollapsed(cc.getAttribute("data-collapsecat")); return; }
     if (closestAttr(e.target, "data-dragcat")) return; /* poignée de déplacement : un clic ne fait rien (ni suppression, ni édition) */
     var dc = closestAttr(e.target, "data-delcat");
     if (dc) { openDeleteSectionModal(dc.getAttribute("data-delcat")); return; }
@@ -4782,13 +4826,16 @@ function wireMenuManage(){
      (trop petit au doigt : le balayage sur l'en-tête ne faisait rien,
      le navigateur reprenait le geste pour défiler — pointercancel).
      Le bouton 🗑 (data-delcat) reste un bouton : un toucher dessus ne
-     déplace pas. Suivi sur document (la capture du pointeur n'existe
-     pas partout), lâcher = validation du nouvel ordre. Pas de
+     déplace pas — comme le chevron de repli (data-collapsecat) : sans
+     cette exclusion, un tap sur le chevron partirait en déplacement
+     (capture du pointeur sur l'en-tête) et le clic ne replierait
+     jamais la catégorie. Suivi sur document (la capture du pointeur
+     n'existe pas partout), lâcher = validation du nouvel ordre. Pas de
      déplacement pendant une recherche (liste filtrée). */
   var ml = document.getElementById("manageList");
   if (ml) ml.addEventListener("pointerdown", function(e){
     var _dt = e.target;
-    if (_dt && _dt.closest && _dt.closest("[data-delcat]")) return; /* 🗑 : un toucher dessus ne déplace pas */
+    if (_dt && _dt.closest && _dt.closest("[data-delcat], [data-collapsecat]")) return; /* 🗑 / chevron : un toucher dessus ne déplace pas */
     var head = (_dt && _dt.closest) ? _dt.closest(".manage-cat-head") : null;
     if (!head) return;
     var grip = head.querySelector("[data-dragcat]");
