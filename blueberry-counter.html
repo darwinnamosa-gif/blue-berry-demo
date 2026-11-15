@@ -666,7 +666,9 @@
       .manage-add-btn:active { filter: brightness(.96); }
       .manage-cat { margin-bottom: 16px; }
       .manage-cat:last-child { margin-bottom: 0; }
-      .manage-cat-name { font-size: 15px; font-weight: 900; color: var(--black); margin-bottom: 7px; }
+      .manage-cat-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 7px; }
+      .manage-cat-name { font-size: 15px; font-weight: 900; color: var(--black); }
+      .manage-cat-del { flex-shrink: 0; min-height: 34px; padding: 5px 11px; }
       .manage-row {
         display: flex; align-items: center; gap: 10px;
         padding: 7px 8px 7px 12px; margin-bottom: 6px;
@@ -688,7 +690,7 @@
       @media (max-width: 560px){
         .manage-row { flex-wrap: wrap; }
         .manage-actions { width: 100%; }
-        .manage-btn { flex: 1; }
+        .manage-actions .manage-btn { flex: 1; }
       }
       /* ---------- Modales Gérer le menu ---------- */
       .bb-modal-overlay {
@@ -1010,6 +1012,16 @@
         <div class="bb-modal-actions">
           <button type="button" class="bb-btn ghost" id="deleteCancel">Annuler</button>
           <button type="button" class="bb-btn danger" id="deleteConfirm">Supprimer</button>
+        </div>
+      </div>
+    </div>
+    <div class="bb-modal-overlay" id="deleteSectionModal" role="dialog" aria-modal="true" aria-labelledby="deleteSectionModalTitle">
+      <div class="bb-modal">
+        <h3 id="deleteSectionModalTitle">Supprimer la catégorie « <span id="deleteSectionName"></span> » ?</h3>
+        <p class="bb-modal-text" id="deleteSectionText"></p>
+        <div class="bb-modal-actions">
+          <button type="button" class="bb-btn ghost" id="deleteSectionCancel">Annuler</button>
+          <button type="button" class="bb-btn danger" id="deleteSectionConfirm">Supprimer</button>
         </div>
       </div>
     </div>
@@ -3779,11 +3791,25 @@
                         + sectionId seulement si le plat change de section)
      added/<dishId>   : plat complet + sectionId (id Firebase-safe,
                         ex. added-<timestamp>-<aléatoire>)
-     sections/<secId> : {name: <string>, createdAt: <ms>} — une
+     sections/<secId> : {name, fr, ar, createdAt} — une
                         catégorie créée depuis « Ajouter un plat »
-                        (id sec-<timestamp>-<aléatoire>) ; la section
-                        est indépendante de ses plats (supprimer un
-                        plat ne supprime jamais sa section).
+                        (id sec-<timestamp>-<aléatoire>). `name` est
+                        le nom français (champ historique, conservé
+                        comme repli) ; `fr` / `ar` font foi quand ils
+                        sont présents. Une section ancienne {name}
+                        seul s'affiche avec fr = ar = name.
+     sections/<secId> : {deleted: true} — une section de BASE
+                        supprimée par le propriétaire : elle
+                        disparaît du menu, des commandes, de
+                        « Gérer le menu » et de la disponibilité.
+                        (Une section créée par le propriétaire se
+                        supprime en effaçant sections/<secId>.)
+   Supprimer une catégorie (comptoir, 🗑 sur son en-tête + dialogue
+   de confirmation) : ses plats ajoutés disparaissent avec elle,
+   ses plats de base sont marqués deleted/<id>, et un plat modifié
+   déplacé DANS la catégorie revient dans sa section d'origine
+   (le déplacement est retiré de son override edited/<id> ; si le
+   déplacement était la seule modification, l'override disparaît).
    Le menu embarqué (menu.json) reste la base imprimée : les overrides ne
    font que le modifier en mémoire, au chargement. FAIL-OPEN : si la
    lecture échoue (pas de réseau, Firebase indisponible), le menu
@@ -3797,6 +3823,7 @@ function applyMenuOverrides(overrides){
      trouvent leur section par id. Idempotent : un id déjà présent
      (base ou déjà ajouté) n'est jamais doublé. */
   var secs = overrides.sections || {};
+  var deletedSecs = {};
   var secIds = Object.keys(secs).sort(function(a, b){
     var ca = (secs[a] && secs[a].createdAt) || 0;
     var cb = (secs[b] && secs[b].createdAt) || 0;
@@ -3805,9 +3832,20 @@ function applyMenuOverrides(overrides){
   });
   secIds.forEach(function(id){
     var s = secs[id];
-    if (!s || typeof s !== 'object' || !s.name || !String(s.name).trim()) return;
+    if (!s || typeof s !== 'object') return;
+    /* Section de base supprimée ({deleted: true}) : notée ici,
+       retirée du MENU après le passage sur les plats — jamais
+       ré-ajoutée. */
+    if (s.deleted) { deletedSecs[id] = true; return; }
+    /* Nom bilingue : `fr` / `ar` font foi, `name` (français, champ
+       historique) sert de repli — une section ancienne {name} seul
+       s'affiche avec fr = ar = name. */
+    var nm = (s.name && String(s.name).trim()) || (s.fr && String(s.fr).trim()) || (s.ar && String(s.ar).trim());
+    if (!nm) return;
+    var fr = (s.fr && String(s.fr).trim()) || nm;
+    var ar = (s.ar && String(s.ar).trim()) || nm;
     for (var i = 0; i < MENU.length; i++) if (MENU[i].id === id) return;
-    MENU.push({ id: id, fr: s.name, ar: s.name, groups: [{ name: '', items: [] }] });
+    MENU.push({ id: id, fr: fr, ar: ar, groups: [{ name: '', items: [] }] });
   });
   var del = overrides.deleted || {};
   var edt = overrides.edited || {};
@@ -3828,7 +3866,7 @@ function applyMenuOverrides(overrides){
           }
           if (e.flavours && e.flavours.length) rep.flavours = e.flavours.slice();
           if (e.assumed) rep.assumed = true;
-          if (e.sectionId && e.sectionId !== cat.id) { moves.push({ dish: rep, sectionId: e.sectionId }); return; }
+          if (e.sectionId && e.sectionId !== cat.id) { moves.push({ dish: rep, sectionId: e.sectionId, origin: cat }); return; }
           kept.push(rep);
         } else {
           kept.push(it);
@@ -3837,13 +3875,27 @@ function applyMenuOverrides(overrides){
       grp.items = kept;
     });
   });
+  /* Sections de base supprimées : retirées du MENU (sur place, pour
+     garder la même référence de tableau) APRÈS le passage sur les
+     plats — les déplacements HORS d'elles ont déjà été collectés
+     ci-dessus, donc ces plats survivent dans leur nouvelle section ;
+     ce qui reste dans la section supprimée disparaît avec elle, et
+     un déplacement VERS elle retombe sur la section d'origine
+     (repli ci-dessous, jamais d'orphelin). */
+  for (var di = MENU.length - 1; di >= 0; di--) if (deletedSecs[MENU[di].id]) MENU.splice(di, 1);
   moves.forEach(function(m){
     for (var i = 0; i < MENU.length; i++) {
       if (MENU[i].id === m.sectionId && MENU[i].groups.length) {
         MENU[i].groups[MENU[i].groups.length - 1].items.push(m.dish);
-        break;
+        return;
       }
     }
+    /* Section cible absente (supprimée) : le plat revient dans sa
+       section d'origine au lieu d'être orphelin — sauf si celle-ci
+       a été supprimée elle aussi (le plat disparaît avec elle). */
+    var originGone = true;
+    for (var j = 0; j < MENU.length; j++) if (MENU[j] === m.origin) { originGone = false; break; }
+    if (!originGone && m.origin.groups.length) m.origin.groups[m.origin.groups.length - 1].items.push(m.dish);
   });
   Object.keys(add).forEach(function(id){
     var a = add[id];
@@ -3909,6 +3961,8 @@ function loadMenuOverrides(timeoutMs){
 var manageQuery = "";
 var manageEditingId = null;   /* id du plat en cours de modification */
 var manageDeletingId = null;  /* id du plat en cours de suppression */
+var manageDeletingSectionId = null; /* id de la catégorie en cours de suppression */
+var MANAGE_DELETE_SECTIONS = true; /* true = le 🗑 de suppression de catégorie est affiché (opt-in du port) */
 var overridesRef = null;      /* db.ref('blueberry-menu-overrides'), après auth */
 function managePriceText(it){
   if (it.options) {
@@ -3923,6 +3977,111 @@ function findManageDish(id){
     if (it.id === id) found = { dish: it, sectionId: cat.id, groupName: grp.name || "" };
   }); }); });
   return found;
+}
+function sectionDishes(sectionId){
+  /* Plats ACTUELLEMENT dans la section (après déplacements) : c'est
+     l'état affiché qui décide, pas la section d'origine. */
+  var out = [];
+  MENU.forEach(function(cat){
+    if (cat.id !== sectionId) return;
+    cat.groups.forEach(function(grp){ grp.items.forEach(function(it){ out.push(it); }); });
+  });
+  return out;
+}
+function openDeleteSectionModal(sectionId){
+  var cat = null;
+  for (var i = 0; i < MENU.length; i++) if (MENU[i].id === sectionId) { cat = MENU[i]; break; }
+  if (!cat) return;
+  var n = sectionDishes(sectionId).length;
+  var nameEl = document.getElementById("deleteSectionName");
+  var textEl = document.getElementById("deleteSectionText");
+  if (!nameEl || !textEl) return; /* modale absente : le port n'a pas opté pour delete_sections */
+  manageDeletingSectionId = sectionId;
+  nameEl.textContent = cat.fr;
+  var txt;
+  if (n === 0) txt = "Supprimer cette catégorie du menu ? Elle ne contient aucun plat.";
+  else if (n === 1) txt = "Cette catégorie contient 1 plat — la catégorie et son plat seront supprimés.";
+  else txt = "Cette catégorie contient " + n + " plats — la catégorie et ses plats seront supprimés.";
+  textEl.textContent = txt;
+  showModal("deleteSectionModal");
+}
+function stripSectionMove(dishId, sectionId){
+  /* Retire le déplacement VERS sectionId d'un plat modifié : le plat
+     revient dans sa section d'origine au lieu d'être supprimé avec
+     la catégorie. Si le déplacement était la seule différence avec
+     le plat de base, l'override disparaît ; sinon il garde ses
+     modifications (nom / prix) sans le déplacement. */
+  var edt = MENU_OVERRIDES.edited || {};
+  var e = edt[dishId];
+  if (!e || typeof e !== "object" || e.sectionId !== sectionId) return;
+  var base = null;
+  MENU_BASE.forEach(function(cat){ cat.groups.forEach(function(grp){ grp.items.forEach(function(it){ if (it.id === dishId) base = it; }); }); });
+  function optEq(a, b){ return JSON.stringify(a || null) === JSON.stringify(b || null); }
+  var sameAsBase = !!base
+    && e.name === base.name
+    && (e.note || '') === (base.note || '')
+    && optEq(e.options, base.options)
+    && (e.price === undefined || e.price === null ? (base.price === undefined || base.price === null) : e.price === base.price)
+    && optEq(e.flavours, base.flavours)
+    && !!e.assumed === !!base.assumed;
+  if (sameAsBase) {
+    overridesRef.child("edited/" + dishId).remove();
+    delete edt[dishId];
+  } else {
+    var kept = {};
+    Object.keys(e).forEach(function(k){ if (k !== "sectionId") kept[k] = e[k]; });
+    overridesRef.child("edited/" + dishId).set(kept);
+    edt[dishId] = kept;
+  }
+}
+function confirmDeleteSectionModal(){
+  if (!overridesRef) { manageToast("Firebase indisponible — suppression impossible pour l'instant."); return; }
+  var sectionId = manageDeletingSectionId;
+  var cat = null;
+  for (var i = 0; i < MENU.length; i++) if (MENU[i].id === sectionId) { cat = MENU[i]; break; }
+  if (!cat) { hideModals(); return; }
+  /* Section créée par le propriétaire (entrée sections/<id>) ou section
+     de base (aucune entrée, ou entrée {deleted: true} déjà posée) : la
+     première s'efface, la seconde est marquée {deleted: true}. */
+  var secRec = (MENU_OVERRIDES && MENU_OVERRIDES.sections && MENU_OVERRIDES.sections[sectionId]) || null;
+  var isCustom = !!(secRec && !secRec.deleted);
+  var dishes = sectionDishes(sectionId);
+  MENU_OVERRIDES = MENU_OVERRIDES || {};
+  dishes.forEach(function(it){
+    if (it.added) {
+      /* Plat ajouté dans cette section : supprimé avec elle. */
+      overridesRef.child("added/" + it.id).remove();
+      if (MENU_OVERRIDES.added) delete MENU_OVERRIDES.added[it.id];
+      if (availRef) availRef.child(it.id).remove();
+      return;
+    }
+    var e = MENU_OVERRIDES.edited && MENU_OVERRIDES.edited[it.id];
+    if (e && e.sectionId === sectionId) {
+      /* Plat déplacé DANS cette section : il revient dans sa section
+         d'origine, il n'est pas supprimé. */
+      stripSectionMove(it.id, sectionId);
+      return;
+    }
+    /* Plat d'origine de cette section : supprimé avec elle. */
+    overridesRef.child("deleted/" + it.id).set(true);
+    (MENU_OVERRIDES.deleted = MENU_OVERRIDES.deleted || {})[it.id] = true;
+    if (MENU_OVERRIDES.edited) delete MENU_OVERRIDES.edited[it.id];
+    overridesRef.child("edited/" + it.id).remove();
+    if (availRef) availRef.child(it.id).remove();
+  });
+  if (isCustom) {
+    overridesRef.child("sections/" + sectionId).remove();
+    if (MENU_OVERRIDES.sections) delete MENU_OVERRIDES.sections[sectionId];
+  } else {
+    var delRec = { deleted: true };
+    overridesRef.child("sections/" + sectionId).set(delRec);
+    (MENU_OVERRIDES.sections = MENU_OVERRIDES.sections || {})[sectionId] = delRec;
+  }
+  rebuildMenuFromOverrides();
+  renderAvailability();
+  renderMenuManage();
+  hideModals();
+  manageToast("Catégorie supprimée du menu.");
 }
 function renderMenuManage(){
   var q = normAvail(manageQuery).trim();
@@ -3944,7 +4103,26 @@ function renderMenuManage(){
           '</div></div>';
       });
     });
-    if (rows) html += '<div class="manage-cat"><div class="manage-cat-name">' + esc(cat.fr) + '</div>' + rows + '</div>';
+    /* En-tête de catégorie. Avec MANAGE_DELETE_SECTIONS, l'en-tête
+       porte son 🗑 de suppression, attaché à la catégorie (jamais à
+       un plat) : seule une pression explicite sur le 🗑 ouvre le
+       dialogue de confirmation, jamais un geste sur l'en-tête — et
+       la catégorie s'affiche même vide (hors recherche) pour
+       pouvoir être supprimée. Sans l'opt-in, l'affichage est
+       l'historique : en-tête simple, catégories vides masquées.
+       Le nom arabe s'affiche à côté du français quand il diffère
+       (comme dans la disponibilité) ; sinon, l'affichage est
+       inchangé — pour un menu français seul, rien ne change. */
+    if (!rows && q) return;
+    if (!rows && !MANAGE_DELETE_SECTIONS) return;
+    var catLabel = esc(cat.fr);
+    if (cat.ar && cat.ar !== cat.fr) catLabel += ' \u00b7 <span dir="auto">' + esc(cat.ar) + '</span>';
+    if (MANAGE_DELETE_SECTIONS) {
+      html += '<div class="manage-cat"><div class="manage-cat-head"><div class="manage-cat-name">' + catLabel + '</div>' +
+        '<button type="button" class="manage-btn del manage-cat-del" data-delcat="' + esc(cat.id) + '" aria-label="Supprimer la catégorie ' + esc(cat.fr) + '">\ud83d\uddd1\ufe0f</button></div>' + rows + '</div>';
+    } else {
+      html += '<div class="manage-cat"><div class="manage-cat-name">' + catLabel + '</div>' + rows + '</div>';
+    }
   });
   var list = document.getElementById("manageList");
   if (list) list.innerHTML = html || '<div class="manage-no-results">Aucun plat trouvé pour « ' + esc(manageQuery.trim()) + ' ».</div>';
@@ -3960,6 +4138,8 @@ function manageToast(msg){
   t._to = setTimeout(function(){ t.classList.remove("show"); }, 3000);
 }
 function sectionOptionsHTML(selectedId, allowNew){
+  /* Les sections supprimées n'y figurent jamais : applyMenuOverrides
+     les a déjà retirées de MENU. */
   var html = MENU.map(function(cat){
     return '<option value="' + esc(cat.id) + '"' + (cat.id === selectedId ? ' selected' : '') + '>' + esc(cat.fr) + '</option>';
   }).join("");
@@ -3987,16 +4167,25 @@ function showModal(id){
   if (m) m.classList.add("show");
 }
 function hideModals(){
-  ["editModal", "addModal", "deleteModal"].forEach(function(id){
+  ["editModal", "addModal", "deleteModal", "deleteSectionModal"].forEach(function(id){
     var m = document.getElementById(id);
     if (m) m.classList.remove("show");
   });
   var nc = document.getElementById("addNewCatName");
   if (nc) nc.value = "";
+  var ncAr = document.getElementById("addNewCatNameAr");
+  if (ncAr) ncAr.value = "";
+  var ncFr = document.getElementById("addNewCatNameFr");
+  if (ncFr) ncFr.value = "";
   var nf = document.getElementById("addNewCatField");
   if (nf) nf.style.display = "none";
+  var nfAr = document.getElementById("addNewCatFieldAr");
+  if (nfAr) nfAr.style.display = "none";
+  var nfFr = document.getElementById("addNewCatFieldFr");
+  if (nfFr) nfFr.style.display = "none";
   manageEditingId = null;
   manageDeletingId = null;
+  manageDeletingSectionId = null;
 }
 function openEditModal(id){
   var found = findManageDish(id);
@@ -4099,8 +4288,16 @@ function openAddModal(){
   document.getElementById("addNote").value = "";
   var nc = document.getElementById("addNewCatName");
   if (nc) nc.value = "";
+  var ncAr = document.getElementById("addNewCatNameAr");
+  if (ncAr) ncAr.value = "";
+  var ncFr = document.getElementById("addNewCatNameFr");
+  if (ncFr) ncFr.value = "";
   var nf = document.getElementById("addNewCatField");
   if (nf) nf.style.display = "none";
+  var nfAr = document.getElementById("addNewCatFieldAr");
+  if (nfAr) nfAr.style.display = "none";
+  var nfFr = document.getElementById("addNewCatFieldFr");
+  if (nfFr) nfFr.style.display = "none";
   showModal("addModal");
 }
 function saveAddModal(){
@@ -4111,11 +4308,29 @@ function saveAddModal(){
   /* « ＋ Nouvelle catégorie… » : le nom est obligatoire, la section
      est créée avec le plat (sections/<secId> + added/<dishId>). */
   var newCatName = "";
+  var newCatAr = "";
+  var newCatFr = "";
   var newSecId = null;
   var newSecCreatedAt = 0;
   if (sectionId === "__new__") {
-    newCatName = document.getElementById("addNewCatName").value.trim();
-    if (!newCatName) { manageToast("Indiquez le nom de la nouvelle catégorie."); return; }
+    /* Deux champs (arabe + français) quand la modale est bilingue,
+       un seul champ sinon — le champ unique vaut pour les deux
+       langues (fr = ar = nom saisi, comme avant). `name` garde le
+       nom français. On lit les champs réellement présents dans le
+       DOM : un seul manage_js sert les deux ports. */
+    var arEl = document.getElementById("addNewCatNameAr");
+    var frEl = document.getElementById("addNewCatNameFr");
+    var singleEl = document.getElementById("addNewCatName");
+    if (arEl && frEl) {
+      newCatAr = arEl.value.trim();
+      newCatFr = frEl.value.trim();
+      if (!newCatAr || !newCatFr) { manageToast("Indiquez le nom de la nouvelle catégorie en arabe et en français."); return; }
+    } else {
+      newCatFr = singleEl ? singleEl.value.trim() : "";
+      newCatAr = newCatFr;
+      if (!newCatFr) { manageToast("Indiquez le nom de la nouvelle catégorie."); return; }
+    }
+    newCatName = newCatFr;
     newSecCreatedAt = Date.now();
     newSecId = "sec-" + newSecCreatedAt + "-" + Math.floor(Math.random() * 1000);
     sectionId = newSecId;
@@ -4127,7 +4342,7 @@ function saveAddModal(){
   var obj = { name: name, note: note, price: price, sectionId: sectionId };
   MENU_OVERRIDES = MENU_OVERRIDES || {};
   if (newSecId) {
-    var secObj = { name: newCatName, createdAt: newSecCreatedAt };
+    var secObj = { name: newCatName, fr: newCatFr, ar: newCatAr, createdAt: newSecCreatedAt };
     overridesRef.child("sections/" + newSecId).set(secObj);
     (MENU_OVERRIDES.sections = MENU_OVERRIDES.sections || {})[newSecId] = secObj;
   }
@@ -4149,11 +4364,18 @@ function wireMenuManage(){
   });
   document.getElementById("manageAddBtn").addEventListener("click", openAddModal);
   document.getElementById("addSection").addEventListener("change", function (e) {
-    /* « ＋ Nouvelle catégorie… » choisie : montre le champ du nom. */
-    var f = document.getElementById("addNewCatField");
-    if (f) f.style.display = (e.target.value === "__new__") ? "" : "none";
+    /* « ＋ Nouvelle catégorie… » choisie : montre le(s) champ(s) du
+       nom — un seul champ, ou les deux (arabe + français) quand la
+       modale est bilingue. */
+    var show = (e.target.value === "__new__");
+    ["addNewCatField", "addNewCatFieldAr", "addNewCatFieldFr"].forEach(function(id){
+      var f = document.getElementById(id);
+      if (f) f.style.display = show ? "" : "none";
+    });
   });
   document.getElementById("manageList").addEventListener("click", function (e) {
+    var dc = closestAttr(e.target, "data-delcat");
+    if (dc) { openDeleteSectionModal(dc.getAttribute("data-delcat")); return; }
     var ed = closestAttr(e.target, "data-edit");
     var dl = ed ? null : closestAttr(e.target, "data-del");
     if (ed) openEditModal(ed.getAttribute("data-edit"));
@@ -4165,8 +4387,16 @@ function wireMenuManage(){
   document.getElementById("addCancel").addEventListener("click", hideModals);
   document.getElementById("deleteConfirm").addEventListener("click", confirmDeleteModal);
   document.getElementById("deleteCancel").addEventListener("click", hideModals);
-  ["editModal", "addModal", "deleteModal"].forEach(function(id){
-    document.getElementById(id).addEventListener("click", function (e) { if (e.target === this) hideModals(); });
+  /* Boutons de la modale de suppression de catégorie : absents quand
+     le port n'a pas opté pour delete_sections — gardés, pour que
+     wireMenuManage ne casse jamais sur une page sans cette modale. */
+  var dsc = document.getElementById("deleteSectionConfirm");
+  if (dsc) dsc.addEventListener("click", confirmDeleteSectionModal);
+  var dsx = document.getElementById("deleteSectionCancel");
+  if (dsx) dsx.addEventListener("click", hideModals);
+  ["editModal", "addModal", "deleteModal", "deleteSectionModal"].forEach(function(id){
+    var m = document.getElementById(id);
+    if (m) m.addEventListener("click", function (e) { if (e.target === this) hideModals(); });
   });
   renderMenuManage();
 }
