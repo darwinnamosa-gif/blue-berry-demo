@@ -3419,13 +3419,17 @@ buildMenuIndexes();
                         + sectionId seulement si le plat change de section)
      added/<dishId>   : plat complet + sectionId (id Firebase-safe,
                         ex. added-<timestamp>-<aléatoire>)
-     sections/<secId> : {name, fr, ar, createdAt} — une
+     sections/<secId> : {name, fr, ar, createdAt, order?} — une
                         catégorie créée depuis « Ajouter un plat »
                         (id sec-<timestamp>-<aléatoire>). `name` est
                         le nom français (champ historique, conservé
                         comme repli) ; `fr` / `ar` font foi quand ils
                         sont présents. Une section ancienne {name}
                         seul s'affiche avec fr = ar = name.
+                        order (facultatif) : nombre — position de
+                        la section (glisser-déposer ; tri en fin
+                        d'applyMenuOverrides) ; sans order, la
+                        section garde sa place actuelle.
      sections/<secId> : {deleted: true} — une section de BASE
                         supprimée par le propriétaire : elle
                         disparaît du menu, des commandes, de
@@ -3439,7 +3443,8 @@ buildMenuIndexes();
    (le déplacement est retiré de son override edited/<id> ; si le
    déplacement était la seule modification, l'override disparaît).
    Le menu embarqué (menu.json) reste la base imprimée : les overrides ne
-   font que le modifier en mémoire, au chargement. FAIL-OPEN : si la
+   font que le modifier en mémoire, au chargement, puis en direct
+   (listenMenuOverrides, ci-dessous). FAIL-OPEN : si la
    lecture échoue (pas de réseau, Firebase indisponible), le menu
    embarqué s'affiche tel quel. */
 var MENU_OVERRIDES = null; /* dernier objet overrides chargé (ou null) */
@@ -3540,6 +3545,34 @@ function applyMenuOverrides(overrides){
     if (a.flavours && a.flavours.length) dish.flavours = a.flavours.slice();
     cat.groups[cat.groups.length - 1].items.push(dish);
   });
+  /* Tri des sections (glisser-déposer, « Gérer le menu ») : une
+     section avec un ordre explicite (sections/<id>.order, nombre)
+     se trie par cet ordre croissant ; sans ordre, elle garde sa
+     place actuelle (sections de base dans l'ordre imprimé,
+     sections créées par ordre de création) ; égalité d'ordre :
+     createdAt puis id. Sans aucune valeur order, l'ordre affiché
+     est exactement l'historique. Le tri réordonne le tableau en
+     place (sans le remplacer), donc menu / commande / comptoir /
+     disponibilité (qui itèrent MENU) voient le même ordre, et
+     l'écoute en direct (rebuild sur chaque changement) propage
+     un nouvel ordre sans rechargement. */
+  var _orderOf = overrides.sections || {};
+  var _indexed = MENU.map(function(cat, idx){ return { cat: cat, idx: idx }; });
+  _indexed.sort(function(a, b){
+    var _oa = _orderOf[a.cat.id], _ob = _orderOf[b.cat.id];
+    var _na = (_oa && typeof _oa.order === "number" && isFinite(_oa.order)) ? _oa.order : null;
+    var _nb = (_ob && typeof _ob.order === "number" && isFinite(_ob.order)) ? _ob.order : null;
+    if (_na !== null && _nb !== null) {
+      if (_na !== _nb) return _na - _nb;
+      var _ca = (_oa && _oa.createdAt) || 0, _cb = (_ob && _ob.createdAt) || 0;
+      if (_ca !== _cb) return _ca - _cb;
+      return a.cat.id < b.cat.id ? -1 : (a.cat.id > b.cat.id ? 1 : 0);
+    }
+    if (_na !== null) return -1;
+    if (_nb !== null) return 1;
+    return a.idx - b.idx;
+  });
+  for (var _si = 0; _si < _indexed.length; _si++) MENU[_si] = _indexed[_si].cat;
 }
 function rebuildMenuFromOverrides(){
   /* Repart du menu imprimé, puis réapplique les overrides : idempotent,
@@ -3581,6 +3614,82 @@ function loadMenuOverrides(timeoutMs){
       });
     } catch (e) { finish(false); }
   });
+}
+var _menuOverridesListener = null; /* db.ref('blueberry-menu-overrides') avec .on('value') attaché, ou null */
+var _menuOverridesListenerPromise = null; /* promesse rendue par le premier appel à listenMenuOverrides */
+function listenMenuOverrides(onUpdate, timeoutMs){
+  /* Écoute EN DIRECT du nœud blueberry-menu-overrides : chaque changement
+     (ajout / modification / suppression d'un plat ou d'une catégorie,
+     depuis le comptoir ou un autre appareil) reconstruit le menu affiché
+     sans rechargement de la page. Même attente de l'authentification
+     anonyme que loadMenuOverrides, puis db.ref(...).on('value', ...).
+     Résout true au premier changement reçu (ou à la première valeur),
+     false après timeoutMs (défaut 8000 ms) sans valeur reçue — comme
+     loadMenuOverrides — MAIS l'écoute RESTE attachée après la résolution :
+     les changements ultérieurs mettent toujours le menu à jour.
+     onUpdate(true) est appelé à chaque valeur reçue (menu reconstruit).
+     Valeur null (nœud vidé) : MENU_OVERRIDES = {} et le menu revient
+     à la base imprimée — c'est toujours un changement.
+     Erreur d'écoute : FAIL-OPEN — le dernier menu connu reste affiché,
+     rien n'est effacé, rien n'est levé, rien n'est rejeté.
+     Double appel : si une écoute est déjà attachée, le second appel ne
+     rattache rien et renvoie la promesse existante (le premier onUpdate
+     reste le seul appelé). Si l'attache a échoué (Firebase absent),
+     un nouvel appel peut réessayer. Ne rejette jamais. Aucun sondage :
+     pas de setInterval ni de relecture périodique (le minuteur du premier
+     déclenchement n'est pas un sondage). */
+  if (_menuOverridesListener) return _menuOverridesListenerPromise;
+  var cb = (typeof onUpdate === 'function') ? onUpdate : function(){};
+  var ms = (typeof timeoutMs === 'number' && timeoutMs > 0) ? timeoutMs : 8000;
+  var db = null;
+  var done = false;
+  var resolveFn = null;
+  var dead = false; /* échec synchrone, avant que la promesse soit stockée */
+  function finish(v){ if (!done && resolveFn) { done = true; resolveFn(v); } }
+  function fail(){
+    /* Échec d'attache (Firebase absent, .on indisponible) : la promesse
+       résout false et un appel ultérieur pourra réessayer — rien n'est
+       attaché, donc pas de double attache à craindre. */
+    if (_menuOverridesListenerPromise) _menuOverridesListenerPromise = null;
+    else dead = true;
+    finish(false);
+  }
+  function attach(){
+    if (_menuOverridesListener) return; /* déjà attachée (deux appels en attente d'auth) */
+    try {
+      var ref = db.ref('blueberry-menu-overrides');
+      _menuOverridesListener = ref;
+      ref.on('value', function(snap){
+        var val = snap.val();
+        if (val && typeof val === 'object') MENU_OVERRIDES = val;
+        else MENU_OVERRIDES = {}; /* nœud vidé : retour à la base */
+        rebuildMenuFromOverrides();
+        try { cb(true); } catch (e) {}
+        finish(true);
+      }, function(){
+        /* FAIL-OPEN : l'écoute a échoué (droits, réseau) — on garde
+           le dernier menu connu à l'écran, on n'efface rien. */
+      });
+    } catch (e) { _menuOverridesListener = null; fail(); }
+  }
+  var p = new Promise(function(resolve){
+    resolveFn = resolve;
+    setTimeout(function(){ finish(false); }, ms);
+    try {
+      if (typeof firebase === 'undefined' || typeof firebase.database !== 'function') { fail(); return; }
+      try { db = (typeof getDb === 'function') ? getDb() : firebase.database(); }
+      catch (e) { fail(); return; }
+      var auth = (firebase.auth && typeof firebase.auth === 'function') ? firebase.auth() : null;
+      if (!auth) { attach(); return; }
+      if (auth.currentUser) { attach(); return; }
+      var off = auth.onAuthStateChanged(function(user){
+        if (user) { try { off(); } catch (e) {} attach(); }
+      });
+    } catch (e) { fail(); }
+  });
+  _menuOverridesListenerPromise = p;
+  if (dead) _menuOverridesListenerPromise = null;
+  return p;
 }
 
 
