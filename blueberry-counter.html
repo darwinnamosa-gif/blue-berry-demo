@@ -749,8 +749,13 @@
         max-width: calc(100vw - 32px); text-align: center;
       }
       .bb-toast.show { display: block; }
+      /* ---------- Photo de catégorie (galerie uniquement) ---------- */
+      .manage-cat-photo { width: 40px; height: 40px; object-fit: cover; border-radius: 10px; vertical-align: middle; margin-inline-end: 8px; flex-shrink: 0; border: 1px solid #D5E2F0; background: #F4F8FC; }
+      .cat-photo-preview { display: block; width: 96px; height: 96px; object-fit: cover; border-radius: 12px; margin-top: 10px; border: 2px solid #D5E2F0; background: #F4F8FC; }
+      .cat-photo-clear { margin-top: 8px; min-height: 40px; padding: 6px 14px; border-radius: 999px; border: 2px solid #D5E2F0; background: #fff; color: #22303F; font-size: 14px; font-weight: 900; font-family: inherit; cursor: pointer; }
+      .cat-photo-clear:active { filter: brightness(.96); }
       /* ---------- Ordre des catégories (glisser-déposer) ---------- */
-      .manage-drag-grip { cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; font-size: 18px; line-height: 1; color: #5B6B7F; padding: 4px 6px; margin-inline-end: 2px; border-radius: 8px; flex-shrink: 0; }
+      .manage-drag-grip { display: inline-block; cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; font-size: 18px; line-height: 1; color: #5B6B7F; padding: 13px 12px; margin-inline-end: 2px; border-radius: 8px; flex-shrink: 0; }
       .manage-drag-grip:active { cursor: grabbing; background: #F4F8FC; color: #22303F; }
       .manage-cat.dragging { opacity: .55; }
       .manage-cat.drag-insert-before { box-shadow: 0 -3px 0 0 #F2B705; }
@@ -840,6 +845,12 @@
         color: #F4F8FC; font-size: 16.5px; font-weight: 800; font-family: inherit; text-align: start;
       }
       .bb-drawer-item:active { background: rgba(244,248,252,.08); border-left-color: #F2B705; }
+
+      /* ---------- Déplacement tactile des catégories (Blue Berry) ---------- */
+      .manage-cat-head { touch-action: none; }
+      .manage-cat-name { cursor: grab; }
+      .manage-drag-grip { padding: 8px 10px; }
+      #manageList.dragging-active, #manageList.dragging-active * { touch-action: none; }
 
 </style>
   </head>
@@ -1017,6 +1028,7 @@
         <div class="bb-field"><label for="addName">Nom du plat</label><input id="addName" type="text" autocomplete="off" /></div>
         <div class="bb-field"><label for="addSection">Section</label><select id="addSection"></select></div>
         <div class="bb-field" id="addNewCatField" style="display:none"><label for="addNewCatName">Nom de la nouvelle catégorie</label><input id="addNewCatName" type="text" autocomplete="off" placeholder="Nom de la catégorie" /><div class="bb-hint">Créée avec ce plat — le plat y sera ajouté.</div></div>
+        <div class="bb-field" id="addNewCatPhotoField" style="display:none"><label for="addNewCatPhotoFile">Photo de la catégorie (facultatif)</label><input id="addNewCatPhotoFile" type="file" accept="image/*" /><img id="addNewCatPhotoPreview" class="cat-photo-preview" alt="" style="display:none" /><button type="button" class="cat-photo-clear" id="addNewCatPhotoClear" style="display:none" aria-label="Retirer la photo">✕ Retirer</button><div class="bb-hint">Choisissez une photo depuis la galerie du téléphone.</div></div>
         <div class="bb-field"><label for="addPrice">Prix (DH)</label><input id="addPrice" type="number" min="0" step="0.5" inputmode="decimal" /></div>
         <div class="bb-field"><label for="addNote">Note (facultatif)</label><input id="addNote" type="text" autocomplete="off" /></div>
         <div class="bb-modal-actions">
@@ -3811,13 +3823,15 @@
                         + sectionId seulement si le plat change de section)
      added/<dishId>   : plat complet + sectionId (id Firebase-safe,
                         ex. added-<timestamp>-<aléatoire>)
-     sections/<secId> : {name, fr, ar, createdAt, order?} — une
+     sections/<secId> : {name, fr, ar, createdAt, order?, photo?} — une
                         catégorie créée depuis « Ajouter un plat »
                         (id sec-<timestamp>-<aléatoire>). `name` est
                         le nom français (champ historique, conservé
                         comme repli) ; `fr` / `ar` font foi quand ils
                         sont présents. Une section ancienne {name}
                         seul s'affiche avec fr = ar = name.
+                        photo (facultatif) : data URL JPEG ≤480 px
+                        choisie dans la galerie du téléphone.
                         order (facultatif) : nombre — position de
                         la section (glisser-déposer ; tri en fin
                         d'applyMenuOverrides) ; sans order, la
@@ -3870,7 +3884,8 @@ function applyMenuOverrides(overrides){
     var fr = (s.fr && String(s.fr).trim()) || nm;
     var ar = (s.ar && String(s.ar).trim()) || nm;
     for (var i = 0; i < MENU.length; i++) if (MENU[i].id === id) return;
-    MENU.push({ id: id, fr: fr, ar: ar, groups: [{ name: '', items: [] }] });
+    var photo = (s.photo && typeof s.photo === 'string' && s.photo.indexOf('data:image/') === 0) ? s.photo : '';
+    MENU.push({ id: id, fr: fr, ar: ar, photo: photo, groups: [{ name: '', items: [] }] });
   });
   var del = overrides.deleted || {};
   var edt = overrides.edited || {};
@@ -4092,6 +4107,7 @@ var manageEditingId = null;   /* id du plat en cours de modification */
 var manageDeletingId = null;  /* id du plat en cours de suppression */
 var manageDeletingSectionId = null; /* id de la catégorie en cours de suppression */
 var MANAGE_SECTION_REORDER = true; /* poignée ☰ de déplacement affichée (opt-in du port) */
+var newCatPhoto = ""; /* data URL JPEG ≤480 px de la nouvelle catégorie (galerie), ou "" */
 var MANAGE_DELETE_SECTIONS = true; /* true = le 🗑 de suppression de catégorie est affiché (opt-in du port) */
 var overridesRef = null;      /* db.ref('blueberry-menu-overrides'), après auth */
 function managePriceText(it){
@@ -4250,13 +4266,14 @@ function renderMenuManage(){
        inchangé — pour un menu français seul, rien ne change. */
     if (!rows && q) return;
     if (!rows && !MANAGE_DELETE_SECTIONS) return;
+    var catPhoto = cat.photo ? '<img class="manage-cat-photo" src="' + esc(cat.photo) + '" alt="" onerror="this.remove()" />' : "";
     var catLabel = esc(cat.fr);
     if (cat.ar && cat.ar !== cat.fr) catLabel += ' \u00b7 <span dir="auto">' + esc(cat.ar) + '</span>';
     if (MANAGE_DELETE_SECTIONS) {
-      html += '<div class="manage-cat"><div class="manage-cat-head"><div class="manage-cat-name">' + dragGripHTML(cat) + catLabel + '</div>' +
+      html += '<div class="manage-cat"><div class="manage-cat-head"><div class="manage-cat-name">' + dragGripHTML(cat) + catPhoto + catLabel + '</div>' +
         '<button type="button" class="manage-btn del manage-cat-del" data-delcat="' + esc(cat.id) + '" aria-label="Supprimer la catégorie ' + esc(cat.fr) + '">\ud83d\uddd1\ufe0f</button></div>' + rows + '</div>';
     } else {
-      html += '<div class="manage-cat"><div class="manage-cat-name">' + dragGripHTML(cat) + catLabel + '</div>' + rows + '</div>';
+      html += '<div class="manage-cat"><div class="manage-cat-name">' + dragGripHTML(cat) + catPhoto + catLabel + '</div>' + rows + '</div>';
     }
   });
   var list = document.getElementById("manageList");
@@ -4377,6 +4394,9 @@ function hideModals(){
   if (nfAr) nfAr.style.display = "none";
   var nfFr = document.getElementById("addNewCatFieldFr");
   if (nfFr) nfFr.style.display = "none";
+  var npf = document.getElementById("addNewCatPhotoField");
+  if (npf) npf.style.display = "none";
+  clearNewCatPhoto();
   manageEditingId = null;
   manageDeletingId = null;
   manageDeletingSectionId = null;
@@ -4493,6 +4513,9 @@ function openAddModal(){
   if (nfAr) nfAr.style.display = "none";
   var nfFr = document.getElementById("addNewCatFieldFr");
   if (nfFr) nfFr.style.display = "none";
+  var npf = document.getElementById("addNewCatPhotoField");
+  if (npf) npf.style.display = "none";
+  clearNewCatPhoto();
   showModal("addModal");
 }
 function saveAddModal(){
@@ -4538,6 +4561,7 @@ function saveAddModal(){
   MENU_OVERRIDES = MENU_OVERRIDES || {};
   if (newSecId) {
     var secObj = { name: newCatName, fr: newCatFr, ar: newCatAr, createdAt: newSecCreatedAt };
+    if (newCatPhoto) secObj.photo = newCatPhoto;
     overridesRef.child("sections/" + newSecId).set(secObj);
     (MENU_OVERRIDES.sections = MENU_OVERRIDES.sections || {})[newSecId] = secObj;
   }
@@ -4548,6 +4572,50 @@ function saveAddModal(){
   renderMenuManage();
   hideModals();
   manageToast("Plat ajouté au menu.");
+}
+function handleNewCatPhotoFile(file){
+  if (!file) return;
+  if ((file.type || "").indexOf("image/") !== 0) { if (typeof manageToast === "function") manageToast("Ce fichier n'est pas une image — choisissez une photo depuis la galerie."); return; }
+  var reader = new FileReader();
+  reader.onload = function(){
+    var img = new Image();
+    img.onload = function(){
+      var max = 480;
+      var scale = Math.min(1, max / Math.max(img.width, img.height));
+      var cw = Math.max(1, Math.round(img.width * scale));
+      var ch = Math.max(1, Math.round(img.height * scale));
+      var dataUrl = null;
+      try {
+        var canvas = document.createElement("canvas");
+        canvas.width = cw; canvas.height = ch;
+        var ctx = canvas.getContext("2d");
+        ctx.fillStyle = "#F4F8FC";
+        ctx.fillRect(0, 0, cw, ch);
+        ctx.drawImage(img, 0, 0, cw, ch);
+        dataUrl = canvas.toDataURL("image/jpeg", 0.8);
+      } catch (e) { dataUrl = null; }
+      newCatPhoto = dataUrl || reader.result;
+      showNewCatPhotoPreview();
+    };
+    img.onerror = function(){ newCatPhoto = reader.result; showNewCatPhotoPreview(); };
+    img.src = reader.result;
+  };
+  reader.readAsDataURL(file);
+}
+function showNewCatPhotoPreview(){
+  var prev = document.getElementById("addNewCatPhotoPreview");
+  if (prev) {
+    if (newCatPhoto) { prev.src = newCatPhoto; prev.style.display = ""; }
+    else prev.style.display = "none";
+  }
+  var clr = document.getElementById("addNewCatPhotoClear");
+  if (clr) clr.style.display = newCatPhoto ? "" : "none";
+}
+function clearNewCatPhoto(){
+  newCatPhoto = "";
+  var input = document.getElementById("addNewCatPhotoFile");
+  if (input) input.value = "";
+  showNewCatPhotoPreview();
 }
 var dragCatId = null; /* id de la catégorie en cours de déplacement, ou null */
 var dragToIndex = -1; /* position d'insertion courante (0..n) pendant le déplacement */
@@ -4576,6 +4644,12 @@ function onDragMove(e){
   dragClearIndicator();
   var els = document.querySelectorAll("#manageList .manage-cat");
   if (!els.length) return;
+  /* dragClearIndicator retire .dragging partout : la rangée tenue
+     garde son opacité .55 pendant tout le déplacement. */
+  for (var i = 0; i < els.length; i++) {
+    var g = els[i].querySelector("[data-dragcat]");
+    if (g && g.getAttribute("data-dragcat") === dragCatId) els[i].classList.add("dragging");
+  }
   if (dragToIndex < els.length) els[dragToIndex].classList.add("drag-insert-before");
   else els[els.length - 1].classList.add("drag-insert-after");
 }
@@ -4585,9 +4659,12 @@ function onDragEnd(e){
   document.removeEventListener("pointercancel", onDragEnd);
   var els = document.querySelectorAll("#manageList .manage-cat");
   dragClearIndicator();
+  var _dragList = document.getElementById("manageList");
+  if (_dragList) _dragList.classList.remove("dragging-active");
   if (!dragCatId) return;
   var id = dragCatId;
   dragCatId = null;
+  if (dragToIndex === -1) return; /* tap sur la poignée sans déplacement : ne rien écrire, ne rien réordonner — sans cela un simple tap déplaçait la section en PREMIER (at = 0). */
   var ids = [];
   for (var k = 0; k < els.length; k++) {
     var g = els[k].querySelector("[data-dragcat]");
@@ -4596,6 +4673,7 @@ function onDragEnd(e){
   var from = ids.indexOf(id);
   if (from === -1) return;
   var to = dragToIndex;
+  if (to < 0) return; /* aucun déplacement : un simple tap ne réordonne pas */
   var next = ids.slice();
   next.splice(from, 1);
   var at = (to > from) ? to - 1 : to;
@@ -4646,7 +4724,7 @@ function wireMenuManage(){
        nom — un seul champ, ou les deux (arabe + français) quand la
        modale est bilingue. */
     var show = (e.target.value === "__new__");
-    ["addNewCatField", "addNewCatFieldAr", "addNewCatFieldFr"].forEach(function(id){
+    ["addNewCatField", "addNewCatFieldAr", "addNewCatFieldFr", "addNewCatPhotoField"].forEach(function(id){
       var f = document.getElementById(id);
       if (f) f.style.display = show ? "" : "none";
     });
@@ -4691,26 +4769,56 @@ function wireMenuManage(){
       setTimeout(function(){ if (document.activeElement === t && isCounterModalOpen()) scrollField(); }, 350);
     });
   });
-  /* Déplacement des catégories au doigt (Pointer Events) :
-     pointerdown sur la poignée ☰, suivi sur document
-     (la capture du pointeur n'existe pas partout),
-     lâcher = validation du nouvel ordre. Pas de
+  /* Photo de catégorie (galerie uniquement) : éléments absents
+     quand le port n'a pas opté pour category_photos — gardés,
+     pour que wireMenuManage ne casse jamais sans ce champ. */
+  var ncpf = document.getElementById("addNewCatPhotoFile");
+  if (ncpf) ncpf.addEventListener("change", function(e){ var f = (e.target.files && e.target.files[0]) || null; handleNewCatPhotoFile(f); });
+  var ncpc = document.getElementById("addNewCatPhotoClear");
+  if (ncpc) ncpc.addEventListener("click", clearNewCatPhoto);
+  /* Déplacement des catégories au doigt (Pointer Events) — Blue Berry
+     (2026-11-15, correctif local) : le déplacement part de TOUT
+     l'en-tête de catégorie (.manage-cat-head), pas du seul glyphe ☰
+     (trop petit au doigt : le balayage sur l'en-tête ne faisait rien,
+     le navigateur reprenait le geste pour défiler — pointercancel).
+     Le bouton 🗑 (data-delcat) reste un bouton : un toucher dessus ne
+     déplace pas. Suivi sur document (la capture du pointeur n'existe
+     pas partout), lâcher = validation du nouvel ordre. Pas de
      déplacement pendant une recherche (liste filtrée). */
   var ml = document.getElementById("manageList");
   if (ml) ml.addEventListener("pointerdown", function(e){
-    var grip = closestAttr(e.target, "data-dragcat");
+    var _dt = e.target;
+    if (_dt && _dt.closest && _dt.closest("[data-delcat]")) return; /* 🗑 : un toucher dessus ne déplace pas */
+    var head = (_dt && _dt.closest) ? _dt.closest(".manage-cat-head") : null;
+    if (!head) return;
+    var grip = head.querySelector("[data-dragcat]");
     if (!grip) return;
     if (manageQuery && manageQuery.trim()) return;
     if (e.preventDefault) e.preventDefault();
     dragCatId = grip.getAttribute("data-dragcat");
     dragToIndex = -1;
-    var held = grip.closest ? grip.closest(".manage-cat") : null;
+    var held = head.closest ? head.closest(".manage-cat") : null;
     if (held) held.classList.add("dragging");
-    if (grip.setPointerCapture) { try { grip.setPointerCapture(e.pointerId); } catch (err) {} }
+    ml.classList.add("dragging-active"); /* touch-action: none partout pendant le déplacement */
+    if (head.setPointerCapture) { try { head.setPointerCapture(e.pointerId); } catch (err) {} }
     document.addEventListener("pointermove", onDragMove);
     document.addEventListener("pointerup", onDragEnd);
     document.addEventListener("pointercancel", onDragEnd);
   });
+  /* Tactile, ceinture + bretelles : le navigateur peut
+     annuler la séquence Pointer Events (pointercancel)
+     pour faire défiler la page malgré touch-action: none
+     sur une poignée <span> inline. Un touchstart NON
+     passif, sur la poignée seule, bloque le défilement
+     dès le toucher — partout ailleurs la page défile
+     normalement, et le bouton 🗑 n'est jamais intercepté.
+     Même garde que pointerdown : pas de déplacement
+     pendant une recherche (liste filtrée). */
+  if (ml) ml.addEventListener("touchstart", function(e){
+    if (!closestAttr(e.target, "data-dragcat")) return;
+    if (manageQuery && manageQuery.trim()) return;
+    if (e.preventDefault) e.preventDefault();
+  }, { passive: false });
   renderMenuManage();
 }
 /* ---------- Tiroir latéral + vues (2026-11-15) ----------
@@ -6351,6 +6459,9 @@ function wireCounterDrawer(){
         /* Overrides du menu (ajout/modif/suppression par le propriétaire) :
            une lecture, puis le menu affiché est reconstruit. */
         loadMenuOverrides().then(function(applied){ if (applied) { renderAvailability(); renderMenuManage(); } });
+        /* Écoute en direct — chaque changement reconstruit le menu affiché
+           sans rechargement (comme THON). */
+        listenMenuOverrides(function(){ renderAvailability(); renderMenuManage(); });
         renderAvailability();
         availRef.on("value", function (snap) {
           availability = snap.val() || {};
