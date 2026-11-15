@@ -707,6 +707,7 @@
       .bb-modal-text { font-size: 15px; line-height: 1.6; color: #22303F; margin: 0 0 18px; }
       .bb-field { margin-bottom: 14px; }
       .bb-field label { display: block; font-size: 13.5px; font-weight: 800; color: #5B6B7F; margin-bottom: 6px; }
+      .bb-hint { font-size: 12.5px; color: #5B6B7F; margin-top: 6px; font-weight: 600; }
       .bb-field input, .bb-field select {
         width: 100%; min-height: 48px; padding: 10px 14px;
         font-size: 16px; font-family: inherit; font-weight: 600; color: #22303F;
@@ -993,6 +994,7 @@
         <h3 id="addModalTitle">Ajouter un plat</h3>
         <div class="bb-field"><label for="addName">Nom du plat</label><input id="addName" type="text" autocomplete="off" /></div>
         <div class="bb-field"><label for="addSection">Section</label><select id="addSection"></select></div>
+        <div class="bb-field" id="addNewCatField" style="display:none"><label for="addNewCatName">Nom de la nouvelle catégorie</label><input id="addNewCatName" type="text" autocomplete="off" placeholder="Nom de la catégorie" /><div class="bb-hint">Créée avec ce plat — le plat y sera ajouté.</div></div>
         <div class="bb-field"><label for="addPrice">Prix (DH)</label><input id="addPrice" type="number" min="0" step="0.5" inputmode="decimal" /></div>
         <div class="bb-field"><label for="addNote">Note (facultatif)</label><input id="addNote" type="text" autocomplete="off" /></div>
         <div class="bb-modal-actions">
@@ -3777,6 +3779,11 @@
                         + sectionId seulement si le plat change de section)
      added/<dishId>   : plat complet + sectionId (id Firebase-safe,
                         ex. added-<timestamp>-<aléatoire>)
+     sections/<secId> : {name: <string>, createdAt: <ms>} — une
+                        catégorie créée depuis « Ajouter un plat »
+                        (id sec-<timestamp>-<aléatoire>) ; la section
+                        est indépendante de ses plats (supprimer un
+                        plat ne supprime jamais sa section).
    Le menu embarqué (menu.json) reste la base imprimée : les overrides ne
    font que le modifier en mémoire, au chargement. FAIL-OPEN : si la
    lecture échoue (pas de réseau, Firebase indisponible), le menu
@@ -3784,6 +3791,24 @@
 var MENU_OVERRIDES = null; /* dernier objet overrides chargé (ou null) */
 function applyMenuOverrides(overrides){
   if (!overrides || typeof overrides !== 'object') return;
+  /* Sections créées par le propriétaire (« Ajouter un plat » >
+     « ＋ Nouvelle catégorie… ») : appliquées EN PREMIER, dans
+     l'ordre de création, pour que les plats ajoutés / déplacés
+     trouvent leur section par id. Idempotent : un id déjà présent
+     (base ou déjà ajouté) n'est jamais doublé. */
+  var secs = overrides.sections || {};
+  var secIds = Object.keys(secs).sort(function(a, b){
+    var ca = (secs[a] && secs[a].createdAt) || 0;
+    var cb = (secs[b] && secs[b].createdAt) || 0;
+    if (ca !== cb) return ca - cb;
+    return a < b ? -1 : (a > b ? 1 : 0);
+  });
+  secIds.forEach(function(id){
+    var s = secs[id];
+    if (!s || typeof s !== 'object' || !s.name || !String(s.name).trim()) return;
+    for (var i = 0; i < MENU.length; i++) if (MENU[i].id === id) return;
+    MENU.push({ id: id, fr: s.name, ar: s.name, groups: [{ name: '', items: [] }] });
+  });
   var del = overrides.deleted || {};
   var edt = overrides.edited || {};
   var add = overrides.added || {};
@@ -3934,10 +3959,15 @@ function manageToast(msg){
   clearTimeout(t._to);
   t._to = setTimeout(function(){ t.classList.remove("show"); }, 3000);
 }
-function sectionOptionsHTML(selectedId){
-  return MENU.map(function(cat){
+function sectionOptionsHTML(selectedId, allowNew){
+  var html = MENU.map(function(cat){
     return '<option value="' + esc(cat.id) + '"' + (cat.id === selectedId ? ' selected' : '') + '>' + esc(cat.fr) + '</option>';
   }).join("");
+  /* Dernière option, modale d'ajout seulement : créer la section avec
+     le plat. La modale de modification ne la propose pas (elle ne
+     liste que les sections existantes). */
+  if (allowNew) html += '<option value="__new__">＋ Nouvelle catégorie…</option>';
+  return html;
 }
 function parseManagePrice(raw){
   if (raw === undefined || raw === null) return null;
@@ -3961,6 +3991,10 @@ function hideModals(){
     var m = document.getElementById(id);
     if (m) m.classList.remove("show");
   });
+  var nc = document.getElementById("addNewCatName");
+  if (nc) nc.value = "";
+  var nf = document.getElementById("addNewCatField");
+  if (nf) nf.style.display = "none";
   manageEditingId = null;
   manageDeletingId = null;
 }
@@ -4060,9 +4094,13 @@ function confirmDeleteModal(){
 }
 function openAddModal(){
   document.getElementById("addName").value = "";
-  document.getElementById("addSection").innerHTML = sectionOptionsHTML(MENU[0] ? MENU[0].id : "");
+  document.getElementById("addSection").innerHTML = sectionOptionsHTML(MENU[0] ? MENU[0].id : "", true);
   document.getElementById("addPrice").value = "";
   document.getElementById("addNote").value = "";
+  var nc = document.getElementById("addNewCatName");
+  if (nc) nc.value = "";
+  var nf = document.getElementById("addNewCatField");
+  if (nf) nf.style.display = "none";
   showModal("addModal");
 }
 function saveAddModal(){
@@ -4070,13 +4108,30 @@ function saveAddModal(){
   var name = document.getElementById("addName").value.trim();
   if (!name) { manageToast("Le nom du plat est obligatoire."); return; }
   var sectionId = document.getElementById("addSection").value;
+  /* « ＋ Nouvelle catégorie… » : le nom est obligatoire, la section
+     est créée avec le plat (sections/<secId> + added/<dishId>). */
+  var newCatName = "";
+  var newSecId = null;
+  var newSecCreatedAt = 0;
+  if (sectionId === "__new__") {
+    newCatName = document.getElementById("addNewCatName").value.trim();
+    if (!newCatName) { manageToast("Indiquez le nom de la nouvelle catégorie."); return; }
+    newSecCreatedAt = Date.now();
+    newSecId = "sec-" + newSecCreatedAt + "-" + Math.floor(Math.random() * 1000);
+    sectionId = newSecId;
+  }
   var price = parseManagePrice(document.getElementById("addPrice").value);
   if (price === null) { manageToast("Indiquez un prix valide."); return; }
   var note = document.getElementById("addNote").value.trim();
   var id = "added-" + Date.now() + "-" + Math.floor(Math.random() * 1000);
   var obj = { name: name, note: note, price: price, sectionId: sectionId };
-  overridesRef.child("added/" + id).set(obj);
   MENU_OVERRIDES = MENU_OVERRIDES || {};
+  if (newSecId) {
+    var secObj = { name: newCatName, createdAt: newSecCreatedAt };
+    overridesRef.child("sections/" + newSecId).set(secObj);
+    (MENU_OVERRIDES.sections = MENU_OVERRIDES.sections || {})[newSecId] = secObj;
+  }
+  overridesRef.child("added/" + id).set(obj);
   (MENU_OVERRIDES.added = MENU_OVERRIDES.added || {})[id] = obj;
   rebuildMenuFromOverrides();
   renderAvailability();
@@ -4093,6 +4148,11 @@ function wireMenuManage(){
     renderMenuManage();
   });
   document.getElementById("manageAddBtn").addEventListener("click", openAddModal);
+  document.getElementById("addSection").addEventListener("change", function (e) {
+    /* « ＋ Nouvelle catégorie… » choisie : montre le champ du nom. */
+    var f = document.getElementById("addNewCatField");
+    if (f) f.style.display = (e.target.value === "__new__") ? "" : "none";
+  });
   document.getElementById("manageList").addEventListener("click", function (e) {
     var ed = closestAttr(e.target, "data-edit");
     var dl = ed ? null : closestAttr(e.target, "data-del");
