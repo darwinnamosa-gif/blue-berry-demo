@@ -3043,11 +3043,25 @@ var MENU_BASE = JSON.parse(JSON.stringify(MENU));
                         + sectionId seulement si le plat change de section)
      added/<dishId>   : plat complet + sectionId (id Firebase-safe,
                         ex. added-<timestamp>-<aléatoire>)
-     sections/<secId> : {name: <string>, createdAt: <ms>} — une
+     sections/<secId> : {name, fr, ar, createdAt} — une
                         catégorie créée depuis « Ajouter un plat »
-                        (id sec-<timestamp>-<aléatoire>) ; la section
-                        est indépendante de ses plats (supprimer un
-                        plat ne supprime jamais sa section).
+                        (id sec-<timestamp>-<aléatoire>). `name` est
+                        le nom français (champ historique, conservé
+                        comme repli) ; `fr` / `ar` font foi quand ils
+                        sont présents. Une section ancienne {name}
+                        seul s'affiche avec fr = ar = name.
+     sections/<secId> : {deleted: true} — une section de BASE
+                        supprimée par le propriétaire : elle
+                        disparaît du menu, des commandes, de
+                        « Gérer le menu » et de la disponibilité.
+                        (Une section créée par le propriétaire se
+                        supprime en effaçant sections/<secId>.)
+   Supprimer une catégorie (comptoir, 🗑 sur son en-tête + dialogue
+   de confirmation) : ses plats ajoutés disparaissent avec elle,
+   ses plats de base sont marqués deleted/<id>, et un plat modifié
+   déplacé DANS la catégorie revient dans sa section d'origine
+   (le déplacement est retiré de son override edited/<id> ; si le
+   déplacement était la seule modification, l'override disparaît).
    Le menu embarqué (menu.json) reste la base imprimée : les overrides ne
    font que le modifier en mémoire, au chargement. FAIL-OPEN : si la
    lecture échoue (pas de réseau, Firebase indisponible), le menu
@@ -3061,6 +3075,7 @@ function applyMenuOverrides(overrides){
      trouvent leur section par id. Idempotent : un id déjà présent
      (base ou déjà ajouté) n'est jamais doublé. */
   var secs = overrides.sections || {};
+  var deletedSecs = {};
   var secIds = Object.keys(secs).sort(function(a, b){
     var ca = (secs[a] && secs[a].createdAt) || 0;
     var cb = (secs[b] && secs[b].createdAt) || 0;
@@ -3069,9 +3084,20 @@ function applyMenuOverrides(overrides){
   });
   secIds.forEach(function(id){
     var s = secs[id];
-    if (!s || typeof s !== 'object' || !s.name || !String(s.name).trim()) return;
+    if (!s || typeof s !== 'object') return;
+    /* Section de base supprimée ({deleted: true}) : notée ici,
+       retirée du MENU après le passage sur les plats — jamais
+       ré-ajoutée. */
+    if (s.deleted) { deletedSecs[id] = true; return; }
+    /* Nom bilingue : `fr` / `ar` font foi, `name` (français, champ
+       historique) sert de repli — une section ancienne {name} seul
+       s'affiche avec fr = ar = name. */
+    var nm = (s.name && String(s.name).trim()) || (s.fr && String(s.fr).trim()) || (s.ar && String(s.ar).trim());
+    if (!nm) return;
+    var fr = (s.fr && String(s.fr).trim()) || nm;
+    var ar = (s.ar && String(s.ar).trim()) || nm;
     for (var i = 0; i < MENU.length; i++) if (MENU[i].id === id) return;
-    MENU.push({ id: id, fr: s.name, ar: s.name, groups: [{ name: '', items: [] }] });
+    MENU.push({ id: id, fr: fr, ar: ar, groups: [{ name: '', items: [] }] });
   });
   var del = overrides.deleted || {};
   var edt = overrides.edited || {};
@@ -3092,7 +3118,7 @@ function applyMenuOverrides(overrides){
           }
           if (e.flavours && e.flavours.length) rep.flavours = e.flavours.slice();
           if (e.assumed) rep.assumed = true;
-          if (e.sectionId && e.sectionId !== cat.id) { moves.push({ dish: rep, sectionId: e.sectionId }); return; }
+          if (e.sectionId && e.sectionId !== cat.id) { moves.push({ dish: rep, sectionId: e.sectionId, origin: cat }); return; }
           kept.push(rep);
         } else {
           kept.push(it);
@@ -3101,13 +3127,27 @@ function applyMenuOverrides(overrides){
       grp.items = kept;
     });
   });
+  /* Sections de base supprimées : retirées du MENU (sur place, pour
+     garder la même référence de tableau) APRÈS le passage sur les
+     plats — les déplacements HORS d'elles ont déjà été collectés
+     ci-dessus, donc ces plats survivent dans leur nouvelle section ;
+     ce qui reste dans la section supprimée disparaît avec elle, et
+     un déplacement VERS elle retombe sur la section d'origine
+     (repli ci-dessous, jamais d'orphelin). */
+  for (var di = MENU.length - 1; di >= 0; di--) if (deletedSecs[MENU[di].id]) MENU.splice(di, 1);
   moves.forEach(function(m){
     for (var i = 0; i < MENU.length; i++) {
       if (MENU[i].id === m.sectionId && MENU[i].groups.length) {
         MENU[i].groups[MENU[i].groups.length - 1].items.push(m.dish);
-        break;
+        return;
       }
     }
+    /* Section cible absente (supprimée) : le plat revient dans sa
+       section d'origine au lieu d'être orphelin — sauf si celle-ci
+       a été supprimée elle aussi (le plat disparaît avec elle). */
+    var originGone = true;
+    for (var j = 0; j < MENU.length; j++) if (MENU[j] === m.origin) { originGone = false; break; }
+    if (!originGone && m.origin.groups.length) m.origin.groups[m.origin.groups.length - 1].items.push(m.dish);
   });
   Object.keys(add).forEach(function(id){
     var a = add[id];
