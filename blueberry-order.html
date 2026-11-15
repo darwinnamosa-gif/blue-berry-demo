@@ -524,6 +524,11 @@
   }
   .cat-pills .pill:active{ background:var(--yellow); }
   .cat-pills .pill.active{ background:var(--yellow); color:var(--black); }
+  /* ---------- Photo de catégorie (2026-11-15) : miniature 40×40 dans
+     l'en-tête de section, photo choisie par le propriétaire (galerie).
+     Sans photo, l'en-tête reste exactement comme avant. ---------- */
+  .section-head .cat-photo{ width:40px; height:40px; object-fit:cover; border-radius:10px; flex-shrink:0; align-self:center; border:2px solid var(--yellow-2); }
+  .section-head:has(.cat-photo){ justify-content:flex-start; }
   
   /* ---------- Blue Berry logo lockup (faithful rebuild of the real logo) ---------- */
   .bb-lockup{ display:inline-flex; align-items:center; gap:.35em; font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif; }
@@ -3419,13 +3424,15 @@ buildMenuIndexes();
                         + sectionId seulement si le plat change de section)
      added/<dishId>   : plat complet + sectionId (id Firebase-safe,
                         ex. added-<timestamp>-<aléatoire>)
-     sections/<secId> : {name, fr, ar, createdAt, order?} — une
+     sections/<secId> : {name, fr, ar, createdAt, order?, photo?} — une
                         catégorie créée depuis « Ajouter un plat »
                         (id sec-<timestamp>-<aléatoire>). `name` est
                         le nom français (champ historique, conservé
                         comme repli) ; `fr` / `ar` font foi quand ils
                         sont présents. Une section ancienne {name}
                         seul s'affiche avec fr = ar = name.
+                        photo (facultatif) : data URL JPEG ≤480 px
+                        choisie dans la galerie du téléphone.
                         order (facultatif) : nombre — position de
                         la section (glisser-déposer ; tri en fin
                         d'applyMenuOverrides) ; sans order, la
@@ -3478,7 +3485,8 @@ function applyMenuOverrides(overrides){
     var fr = (s.fr && String(s.fr).trim()) || nm;
     var ar = (s.ar && String(s.ar).trim()) || nm;
     for (var i = 0; i < MENU.length; i++) if (MENU[i].id === id) return;
-    MENU.push({ id: id, fr: fr, ar: ar, groups: [{ name: '', items: [] }] });
+    var photo = (s.photo && typeof s.photo === 'string' && s.photo.indexOf('data:image/') === 0) ? s.photo : '';
+    MENU.push({ id: id, fr: fr, ar: ar, photo: photo, groups: [{ name: '', items: [] }] });
   });
   var del = overrides.deleted || {};
   var edt = overrides.edited || {};
@@ -3859,6 +3867,7 @@ function renderMenu(){
     section.id = 'sec-' + cat.id;
     var head = document.createElement('div');
     head.className = 'section-head';
+    if (cat.photo && typeof cat.photo === 'string' && cat.photo.indexOf('data:image/') === 0) { var _ph = document.createElement('img'); _ph.className = 'cat-photo'; _ph.src = cat.photo; _ph.alt = ''; _ph.onerror = function(){ this.remove(); }; head.appendChild(_ph); }
     var fr = document.createElement('span'); fr.className = 'fr'; fr.textContent = cat.fr;
     head.appendChild(fr);
     section.appendChild(head);
@@ -4313,6 +4322,8 @@ applyAvailability();
 initAuth(); /* anonymous sign-in first; listeners start once signed in */
 startAvailabilityListener(); /* no-op until auth succeeds */
 loadMenuOverrides().then(function(applied){ if (applied) { renderMenu(); applyAvailability(); } });
+/* Écoute en direct des overrides — chaque changement au comptoir reconstruit le menu affiché sans rechargement (comme THON). */
+listenMenuOverrides(function(){ renderMenu(); applyAvailability(); });
 setMode('surplace');
 modeSurplaceBtn.addEventListener('click', function(){ setMode('surplace'); });
 modeEmporterBtn.addEventListener('click', function(){ setMode('emporter'); });
