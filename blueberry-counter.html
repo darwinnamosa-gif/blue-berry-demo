@@ -766,6 +766,11 @@
       .manage-collapse-btn { display: inline-block; flex-shrink: 0; min-width: 44px; min-height: 44px; padding: 10px 12px; border: none; background: transparent; color: #5B6B7F; font-size: 16px; line-height: 1; cursor: pointer; font-family: inherit; border-radius: 8px; vertical-align: middle; }
       .manage-collapse-btn:active { background: #F4F8FC; color: #22303F; }
       .manage-cat-count { font-size: 13px; font-weight: 800; color: #5B6B7F; margin-inline-start: 6px; white-space: nowrap; }
+      /* ---------- Modification de catégorie (nom + photo) ---------- */
+      .manage-cat-edit { flex-shrink: 0; min-height: 34px; padding: 5px 11px; }
+      /* ---------- Description (plat + catégorie) ---------- */
+      .bb-field textarea { width: 100%; min-height: 76px; padding: 10px 14px; font-size: 16px; font-family: inherit; color: #22303F; font-weight: 600; border: 2px solid #D5E2F0; border-radius: 12px; background: #fff; resize: vertical; }
+      .bb-field textarea:focus { outline: none; border-color: #77A3DC; box-shadow: 0 0 0 3px rgba(119,163,220,.3); }
 
       /* ---------- Tiroir latéral + vues (2026-11-15) : comptoir propre, commandes uniquement ---------- */
       .drawer-btn {
@@ -857,6 +862,18 @@
       .manage-cat-name { cursor: grab; }
       .manage-drag-grip { padding: 8px 10px; }
       #manageList.dragging-active, #manageList.dragging-active * { touch-action: none; }
+      /* ---------- En-tête : le chevron ne passe jamais seul à la ligne (Blue Berry, 2026-11-16) ----------
+         Le bouton ✎ (ajouté à l'en-tête) a rétréci .manage-cat-name : son
+         contenu en ligne passait à la ligne et le chevron ▸ seul se
+         retrouvait au début de la 2e ligne, exactement là où part le
+         déplacement au doigt — un tap là repliat la catégorie au lieu de
+         la déplacer (régression trouvée par tests/collapse_e2e.js : le
+         déplacement d'une catégorie repliée ne démarrait plus). En flex
+         sans retour à la ligne, le libellé se replie À L'INTÉRIEUR de sa
+         propre boîte (nom long sur plusieurs lignes) et le chevron reste
+         sur la 1re ligne, à droite — jamais sous la poignée. */
+      .manage-cat-name { display: flex; align-items: center; flex-wrap: nowrap; }
+      .manage-cat-name .manage-drag-grip { flex-shrink: 0; }
 
 </style>
   </head>
@@ -1022,6 +1039,7 @@
         <div class="bb-field"><label for="editName">Nom du plat</label><input id="editName" type="text" autocomplete="off" /></div>
         <div class="bb-field"><label for="editSection">Section</label><select id="editSection"></select></div>
         <div id="editPriceFields"></div>
+        <div class="bb-field"><label for="editDesc">Description (facultatif)</label><textarea id="editDesc" rows="3" dir="auto"></textarea><div class="bb-hint">Affichée sous le nom du plat sur le menu QR. Vide = description imprimée.</div></div>
         <div class="bb-modal-actions">
           <button type="button" class="bb-btn ghost" id="editCancel">Annuler</button>
           <button type="button" class="bb-btn primary" id="editSave">Enregistrer</button>
@@ -1034,9 +1052,10 @@
         <div class="bb-field"><label for="addName">Nom du plat</label><input id="addName" type="text" autocomplete="off" /></div>
         <div class="bb-field"><label for="addSection">Section</label><select id="addSection"></select></div>
         <div class="bb-field" id="addNewCatField" style="display:none"><label for="addNewCatName">Nom de la nouvelle catégorie</label><input id="addNewCatName" type="text" autocomplete="off" placeholder="Nom de la catégorie" /><div class="bb-hint">Créée avec ce plat — le plat y sera ajouté.</div></div>
+        <div class="bb-field" id="addNewCatDescField" style="display:none"><label for="addNewCatDesc">Description de la catégorie (facultatif)</label><textarea id="addNewCatDesc" rows="3" dir="auto"></textarea><div class="bb-hint">Affichée sous le titre de la catégorie sur le menu QR.</div></div>
         <div class="bb-field" id="addNewCatPhotoField" style="display:none"><label for="addNewCatPhotoFile">Photo de la catégorie (facultatif)</label><input id="addNewCatPhotoFile" type="file" accept="image/*" /><img id="addNewCatPhotoPreview" class="cat-photo-preview" alt="" style="display:none" /><button type="button" class="cat-photo-clear" id="addNewCatPhotoClear" style="display:none" aria-label="Retirer la photo">✕ Retirer</button><div class="bb-hint">Choisissez une photo depuis la galerie du téléphone.</div></div>
         <div class="bb-field"><label for="addPrice">Prix (DH)</label><input id="addPrice" type="number" min="0" step="0.5" inputmode="decimal" /></div>
-        <div class="bb-field"><label for="addNote">Note (facultatif)</label><input id="addNote" type="text" autocomplete="off" /></div>
+        <div class="bb-field"><label for="addDesc">Description (facultatif)</label><textarea id="addDesc" rows="3" dir="auto"></textarea><div class="bb-hint">Affichée sous le nom du plat sur le menu QR.</div></div>
         <div class="bb-modal-actions">
           <button type="button" class="bb-btn ghost" id="addCancel">Annuler</button>
           <button type="button" class="bb-btn primary" id="addSave">Ajouter</button>
@@ -1060,6 +1079,18 @@
         <div class="bb-modal-actions">
           <button type="button" class="bb-btn ghost" id="deleteSectionCancel">Annuler</button>
           <button type="button" class="bb-btn danger" id="deleteSectionConfirm">Supprimer</button>
+        </div>
+      </div>
+    </div>
+    <div class="bb-modal-overlay" id="editSectionModal" role="dialog" aria-modal="true" aria-labelledby="editSectionModalTitle">
+      <div class="bb-modal">
+        <h3 id="editSectionModalTitle">Modifier la catégorie « <span id="editSectionName"></span> » ?</h3>
+                <div class="bb-field"><label for="editSectionNameSingle">Nom de la catégorie</label><input id="editSectionNameSingle" type="text" autocomplete="off" placeholder="Nom de la catégorie" /></div>
+        <div class="bb-field"><label for="editSectionDesc">Description de la catégorie (facultatif)</label><textarea id="editSectionDesc" rows="3" dir="auto"></textarea><div class="bb-hint">Affichée sous le titre de la catégorie sur le menu QR. Vide = sous-titre imprimé.</div></div>
+        <div class="bb-field" id="editSectionPhotoField"><label>Photo de la catégorie</label><img id="editSectionPhotoPreview" class="cat-photo-preview" alt="" style="display:none" /><label for="editSectionPhotoFile">Changer la photo</label><input id="editSectionPhotoFile" type="file" accept="image/*" /><button type="button" class="cat-photo-clear" id="editSectionPhotoRemove" style="display:none">✕ Supprimer la photo</button><div class="bb-hint">Choisissez une photo depuis la galerie du téléphone.</div></div>
+        <div class="bb-modal-actions">
+          <button type="button" class="bb-btn ghost" id="editSectionCancel">Annuler</button>
+          <button type="button" class="bb-btn primary" id="editSectionSave">Enregistrer</button>
         </div>
       </div>
     </div>
@@ -2176,36 +2207,42 @@
             "id": "menu-enfants-anniversaires-sharing-box-anniversaires-buffet-sucre-gateau-d-anniversaire-personnalise",
             "name": "Gâteau d'anniversaire personnalisé",
             "note": "Dh/Kg",
+            "desc": "Dh/Kg",
             "price": 250
           },
           {
             "id": "menu-enfants-anniversaires-sharing-box-anniversaires-buffet-sucre-cupcakes",
             "name": "Cupcakes",
             "note": "Dh/Pièce",
+            "desc": "Dh/Pièce",
             "price": 18
           },
           {
             "id": "menu-enfants-anniversaires-sharing-box-anniversaires-buffet-sucre-popcakes",
             "name": "Popcakes",
             "note": "Dh/Pièce",
+            "desc": "Dh/Pièce",
             "price": 8
           },
           {
             "id": "menu-enfants-anniversaires-sharing-box-anniversaires-buffet-sucre-gateaux-soiree-blue-berry",
             "name": "Gâteaux soirée Blue Berry",
             "note": "Dh/Pièce",
+            "desc": "Dh/Pièce",
             "price": 8
           },
           {
             "id": "menu-enfants-anniversaires-sharing-box-anniversaires-buffet-sucre-popcorn-blue-sky",
             "name": "Popcorn Blue Sky",
             "note": "Dh/Pièce",
+            "desc": "Dh/Pièce",
             "price": 8
           },
           {
             "id": "menu-enfants-anniversaires-sharing-box-anniversaires-buffet-sucre-popcorn-bubble-gum",
             "name": "Popcorn Bubble-Gum",
             "note": "Dh/Pièce",
+            "desc": "Dh/Pièce",
             "price": 8
           }
         ]
@@ -3133,18 +3170,21 @@
             "id": "le-marocain-suite-couscous-rfissa-seffa-couscous",
             "name": "COUSCOUS",
             "note": "Vendredis uniquement",
+            "desc": "Vendredis uniquement",
             "price": 68
           },
           {
             "id": "le-marocain-suite-couscous-rfissa-seffa-rfissa-au-poulet",
             "name": "RFISSA au poulet",
             "note": "Mercredis uniquement",
+            "desc": "Mercredis uniquement",
             "price": 78
           },
           {
             "id": "le-marocain-suite-couscous-rfissa-seffa-seffa-au-poulet",
             "name": "SEFFA au poulet",
             "note": "Jeudis uniquement",
+            "desc": "Jeudis uniquement",
             "price": 78
           }
         ]
@@ -3559,6 +3599,7 @@
             "id": "poke-bowl-fried-rolls-poke-bowl-composez-poke-saumon",
             "name": "Poke Saumon",
             "note": "Prix non imprimé — tarif Régulier/XL selon taille",
+            "desc": "Prix non imprimé — tarif Régulier/XL selon taille",
             "options": [
               {
                 "label": "Régulier",
@@ -3575,6 +3616,7 @@
             "id": "poke-bowl-fried-rolls-poke-bowl-composez-poke-saumon-xl",
             "name": "Poke Saumon XL",
             "note": "Prix non imprimé — tarif Régulier/XL selon taille",
+            "desc": "Prix non imprimé — tarif Régulier/XL selon taille",
             "options": [
               {
                 "label": "Régulier",
@@ -3591,6 +3633,7 @@
             "id": "poke-bowl-fried-rolls-poke-bowl-composez-poke-poulet-teriyaki",
             "name": "Poke Poulet Teriyaki",
             "note": "Prix non imprimé — tarif Régulier/XL selon taille",
+            "desc": "Prix non imprimé — tarif Régulier/XL selon taille",
             "options": [
               {
                 "label": "Régulier",
@@ -3607,6 +3650,7 @@
             "id": "poke-bowl-fried-rolls-poke-bowl-composez-poke-poulet-teriyaki-xl",
             "name": "Poke Poulet Teriyaki XL",
             "note": "Prix non imprimé — tarif Régulier/XL selon taille",
+            "desc": "Prix non imprimé — tarif Régulier/XL selon taille",
             "options": [
               {
                 "label": "Régulier",
@@ -3623,6 +3667,7 @@
             "id": "poke-bowl-fried-rolls-poke-bowl-composez-poke-yaki",
             "name": "Poke Yaki",
             "note": "Prix non imprimé — tarif Régulier/XL selon taille",
+            "desc": "Prix non imprimé — tarif Régulier/XL selon taille",
             "options": [
               {
                 "label": "Régulier",
@@ -3639,6 +3684,7 @@
             "id": "poke-bowl-fried-rolls-poke-bowl-composez-poke-yaki-xl",
             "name": "Poke Yaki XL",
             "note": "Prix non imprimé — tarif Régulier/XL selon taille",
+            "desc": "Prix non imprimé — tarif Régulier/XL selon taille",
             "options": [
               {
                 "label": "Régulier",
@@ -3827,15 +3873,21 @@
      edited/<dishId>  : plat complet {name, note, price} ou {name, note,
                         options:[{label, price}]} (+ flavours si applicable,
                         + sectionId seulement si le plat change de section)
+                        desc (facultatif) : texte affiché sous le
+                        nom du plat sur le menu QR ; absent ou vide
+                        = description imprimée. `note` est conservé
+                        (ancien champ, jamais affiché).
      added/<dishId>   : plat complet + sectionId (id Firebase-safe,
                         ex. added-<timestamp>-<aléatoire>)
-     sections/<secId> : {name, fr, ar, createdAt, order?, photo?} — une
+     sections/<secId> : {name, fr, ar, createdAt, order?, photo?, desc?} — une
                         catégorie créée depuis « Ajouter un plat »
                         (id sec-<timestamp>-<aléatoire>). `name` est
                         le nom français (champ historique, conservé
                         comme repli) ; `fr` / `ar` font foi quand ils
                         sont présents. Une section ancienne {name}
                         seul s'affiche avec fr = ar = name.
+                        desc (facultatif) : sous-titre affiché sous
+                        le titre de la catégorie sur le menu QR.
                         photo (facultatif) : data URL JPEG ≤480 px
                         choisie dans la galerie du téléphone.
                         order (facultatif) : nombre — position de
@@ -3886,12 +3938,43 @@ function applyMenuOverrides(overrides){
        historique) sert de repli — une section ancienne {name} seul
        s'affiche avec fr = ar = name. */
     var nm = (s.name && String(s.name).trim()) || (s.fr && String(s.fr).trim()) || (s.ar && String(s.ar).trim());
-    if (!nm) return;
+    if (!nm) {
+      /* Enregistrement SANS NOM (ex. {order: N} créé par le
+         glisser-déposer, puis description ou photo seule) : la
+         description / la photo s'applique quand même à la
+         section de base correspondante — le nom imprimé est
+         conservé. Un {order: N} seul (rien à afficher) est
+         ignoré comme avant, et une section inconnue sans nom
+         n'est jamais créée. */
+      var _nd = (s.desc && typeof s.desc === 'string' && s.desc.trim()) ? s.desc.trim() : '';
+      var _np = (s.photo && typeof s.photo === 'string' && s.photo.indexOf('data:image/') === 0) ? s.photo : '';
+      if (!_nd && !_np) return;
+      for (var _ni = 0; _ni < MENU.length; _ni++) {
+        if (MENU[_ni].id === id) { MENU[_ni].desc = _nd; MENU[_ni].photo = _np; return; }
+      }
+      return;
+    }
     var fr = (s.fr && String(s.fr).trim()) || nm;
     var ar = (s.ar && String(s.ar).trim()) || nm;
-    for (var i = 0; i < MENU.length; i++) if (MENU[i].id === id) return;
+    var editDesc = (s.desc && typeof s.desc === 'string' && s.desc.trim()) ? s.desc.trim() : '';
+    var editPhoto = (s.photo && typeof s.photo === 'string' && s.photo.indexOf('data:image/') === 0) ? s.photo : '';
+    for (var i = 0; i < MENU.length; i++) {
+      if (MENU[i].id === id) {
+        /* Section DÉJÀ dans le menu imprimé (base) :
+           l'enregistrement porte le renommage / la photo
+           (édition de catégorie) — il gagne sur le libellé
+           imprimé. Un enregistrement {order: N} seul
+           n'arrive jamais ici (pas de nom : retour
+           anticipé ci-dessus). */
+        MENU[i].fr = fr;
+        MENU[i].ar = ar;
+        MENU[i].photo = editPhoto;
+        MENU[i].desc = editDesc;
+        return;
+      }
+    }
     var photo = (s.photo && typeof s.photo === 'string' && s.photo.indexOf('data:image/') === 0) ? s.photo : '';
-    MENU.push({ id: id, fr: fr, ar: ar, photo: photo, groups: [{ name: '', items: [] }] });
+    MENU.push({ id: id, fr: fr, ar: ar, photo: photo, desc: editDesc, groups: [{ name: '', items: [] }] });
   });
   var del = overrides.deleted || {};
   var edt = overrides.edited || {};
@@ -3905,6 +3988,8 @@ function applyMenuOverrides(overrides){
         var e = edt[it.id];
         if (e && typeof e === 'object' && e.name) {
           var rep = { id: it.id, name: e.name, note: e.note || '' };
+          if (e.desc && String(e.desc).trim()) rep.desc = e.desc;
+          else if (it.desc) rep.desc = it.desc;
           if (e.options && e.options.length) {
             rep.options = e.options.map(function(o){ return { label: String(o.label), price: Math.max(0, +o.price || 0) }; });
           } else if (e.price !== undefined && e.price !== null && e.price !== '') {
@@ -3950,6 +4035,7 @@ function applyMenuOverrides(overrides){
     for (var i = 0; i < MENU.length; i++) if (MENU[i].id === a.sectionId) { cat = MENU[i]; break; }
     if (!cat || !cat.groups.length) return;
     var dish = { id: id, name: a.name, note: a.note || '', added: true };
+    if (a.desc && String(a.desc).trim()) dish.desc = a.desc;
     if (a.options && a.options.length) {
       dish.options = a.options.map(function(o){ return { label: String(o.label), price: Math.max(0, +o.price || 0) }; });
     } else if (a.price !== undefined && a.price !== null && a.price !== '') {
@@ -4112,6 +4198,11 @@ var manageQuery = "";
 var manageEditingId = null;   /* id du plat en cours de modification */
 var manageDeletingId = null;  /* id du plat en cours de suppression */
 var manageDeletingSectionId = null; /* id de la catégorie en cours de suppression */
+var MANAGE_EDIT_SECTIONS = true; /* bouton ✎ de modification de catégorie affiché (opt-in du port) */
+var manageEditingSectionId = null; /* id de la catégorie en cours de modification */
+var editCatPhoto = ""; /* data URL JPEG ≤480 px choisie dans la modale (galerie), ou "" */
+var editCatPhotoOrig = ""; /* photo actuelle de la catégorie à l'ouverture de la modale, ou "" */
+var editCatPhotoRemoved = false; /* vrai si le propriétaire a demandé « Supprimer la photo » */
 var MANAGE_SECTION_REORDER = true; /* poignée ☰ de déplacement affichée (opt-in du port) */
 var newCatPhoto = ""; /* data URL JPEG ≤480 px de la nouvelle catégorie (galerie), ou "" */
 var MANAGE_DELETE_SECTIONS = true; /* true = le 🗑 de suppression de catégorie est affiché (opt-in du port) */
@@ -4172,6 +4263,7 @@ function stripSectionMove(dishId, sectionId){
   var sameAsBase = !!base
     && e.name === base.name
     && (e.note || '') === (base.note || '')
+    && (!e.desc || e.desc === (base.desc || ''))
     && optEq(e.options, base.options)
     && (e.price === undefined || e.price === null ? (base.price === undefined || base.price === null) : e.price === base.price)
     && optEq(e.flavours, base.flavours)
@@ -4201,7 +4293,14 @@ function confirmDeleteSectionModal(){
      doit pas passer pour une section personnalisée, sinon
      sa suppression effacerait l'ordre au lieu de la
      marquer {deleted: true} — et elle reviendrait. */
-  var isCustom = !!(secRec && !secRec.deleted && (secRec.name || secRec.fr || secRec.ar));
+/* Une section de base RENOMMÉE porte un nom dans son
+     enregistrement : le test « a un nom » la prendrait
+     pour une section créée, et sa suppression effacerait
+     l'enregistrement au lieu de la marquer {deleted: true}
+     — elle reviendrait. Seul MENU_BASE tranche : un id
+     imprimé est une section de base, quoi que porte son
+     enregistrement. */
+  var isCustom = !!(secRec && !secRec.deleted && (secRec.name || secRec.fr || secRec.ar)) && !MENU_BASE.some(function(c){ return c.id === sectionId; });
   var dishes = sectionDishes(sectionId);
   MENU_OVERRIDES = MENU_OVERRIDES || {};
   dishes.forEach(function(it){
@@ -4280,9 +4379,9 @@ function renderMenuManage(){
     if (cat.ar && cat.ar !== cat.fr) catLabel += ' \u00b7 <span dir="auto">' + esc(cat.ar) + '</span>';
     if (MANAGE_DELETE_SECTIONS) {
       html += '<div class="manage-cat' + (catCollapsed ? ' collapsed' : '') + '"><div class="manage-cat-head"><div class="manage-cat-name">' + dragGripHTML(cat) + catPhoto + catLabel + (catCollapsed ? manageCollapseCountHTML(catDishCount) : '') + manageCollapseBtnHTML(cat) + '</div>' +
-        '<button type="button" class="manage-btn del manage-cat-del" data-delcat="' + esc(cat.id) + '" aria-label="Supprimer la catégorie ' + esc(cat.fr) + '">\ud83d\uddd1\ufe0f</button></div>' + rows + '</div>';
+        editSectionBtnHTML(cat) + '<button type="button" class="manage-btn del manage-cat-del" data-delcat="' + esc(cat.id) + '" aria-label="Supprimer la catégorie ' + esc(cat.fr) + '">\ud83d\uddd1\ufe0f</button></div>' + rows + '</div>';
     } else {
-      html += '<div class="manage-cat' + (catCollapsed ? ' collapsed' : '') + '"><div class="manage-cat-name">' + dragGripHTML(cat) + catPhoto + catLabel + (catCollapsed ? manageCollapseCountHTML(catDishCount) : '') + manageCollapseBtnHTML(cat) + '</div>' + rows + '</div>';
+      html += '<div class="manage-cat' + (catCollapsed ? ' collapsed' : '') + '"><div class="manage-cat-head"><div class="manage-cat-name">' + dragGripHTML(cat) + catPhoto + catLabel + (catCollapsed ? manageCollapseCountHTML(catDishCount) : '') + manageCollapseBtnHTML(cat) + '</div>' + editSectionBtnHTML(cat) + '</div>' + rows + '</div>';
     }
   });
   var list = document.getElementById("manageList");
@@ -4360,6 +4459,7 @@ function closeTopCounterModal(){
   if (top.id === "editModal") manageEditingId = null;
   else if (top.id === "deleteModal") manageDeletingId = null;
   else if (top.id === "deleteSectionModal") manageDeletingSectionId = null;
+  else if (top.id === "editSectionModal") { manageEditingSectionId = null; if (typeof clearEditCatPhoto === "function") clearEditCatPhoto(); }
   else if (top.id === "addModal") {
     var nc = document.getElementById("addNewCatName");
     if (nc) nc.value = "";
@@ -4375,6 +4475,10 @@ function closeTopCounterModal(){
     if (nfFr) nfFr.style.display = "none";
     var npf = document.getElementById("addNewCatPhotoField");
     if (npf) npf.style.display = "none";
+    var ndf = document.getElementById("addNewCatDescField");
+    if (ndf) ndf.style.display = "none";
+    var nd = document.getElementById("addNewCatDesc");
+    if (nd) nd.value = "";
     if (typeof clearNewCatPhoto === "function") clearNewCatPhoto();
   }
   if (!isCounterModalOpen()) setCounterStatsVisible(true);
@@ -4387,7 +4491,7 @@ function showModal(id){
   setCounterStatsVisible(false);
 }
 function hideModals(){
-  ["editModal", "addModal", "deleteModal", "deleteSectionModal"].forEach(function(id){
+  ["editModal", "addModal", "deleteModal", "deleteSectionModal", "editSectionModal"].forEach(function(id){
     var m = document.getElementById(id);
     if (m) m.classList.remove("show");
   });
@@ -4406,9 +4510,15 @@ function hideModals(){
   var npf = document.getElementById("addNewCatPhotoField");
   if (npf) npf.style.display = "none";
   clearNewCatPhoto();
+  var ndf = document.getElementById("addNewCatDescField");
+  if (ndf) ndf.style.display = "none";
+  var nd = document.getElementById("addNewCatDesc");
+  if (nd) nd.value = "";
   manageEditingId = null;
   manageDeletingId = null;
   manageDeletingSectionId = null;
+  manageEditingSectionId = null;
+  if (typeof clearEditCatPhoto === "function") clearEditCatPhoto();
   setCounterStatsVisible(true); /* modale fermée : le bouton STATS revient, si déverrouillé */
 }
 function openEditModal(id){
@@ -4417,6 +4527,8 @@ function openEditModal(id){
   manageEditingId = id;
   var it = found.dish;
   document.getElementById("editName").value = it.name;
+  var editDescEl = document.getElementById("editDesc");
+  if (editDescEl) editDescEl.value = it.desc || "";
   document.getElementById("editSection").innerHTML = sectionOptionsHTML(found.sectionId);
   var box = document.getElementById("editPriceFields");
   box.innerHTML = "";
@@ -4444,6 +4556,14 @@ function saveEditModal(){
   if (!name) { manageToast("Le nom du plat est obligatoire."); return; }
   var sectionId = document.getElementById("editSection").value;
   var obj = { name: name, note: it.note || "" };
+  /* Description affichée sous le nom du plat sur le menu QR :
+     écrite seulement si elle diffère de la description de base
+     (MENU_BASE) — vider le champ restaure l'impression. */
+  var editDescEl2 = document.getElementById("editDesc");
+  var newDesc = editDescEl2 ? editDescEl2.value.trim() : "";
+  var baseDesc = "";
+  MENU_BASE.forEach(function(cat){ cat.groups.forEach(function(grp){ grp.items.forEach(function(it2){ if (it2.id === it.id) baseDesc = it2.desc || ""; }); }); });
+  if (newDesc && newDesc !== baseDesc) obj.desc = newDesc;
   var priceInputs = document.querySelectorAll("#editPriceFields input");
   if (it.options) {
     var opts = [];
@@ -4509,7 +4629,8 @@ function openAddModal(){
   document.getElementById("addName").value = "";
   document.getElementById("addSection").innerHTML = sectionOptionsHTML(MENU[0] ? MENU[0].id : "", true);
   document.getElementById("addPrice").value = "";
-  document.getElementById("addNote").value = "";
+  var addDescEl = document.getElementById("addDesc");
+  if (addDescEl) addDescEl.value = "";
   var nc = document.getElementById("addNewCatName");
   if (nc) nc.value = "";
   var ncAr = document.getElementById("addNewCatNameAr");
@@ -4525,6 +4646,10 @@ function openAddModal(){
   var npf = document.getElementById("addNewCatPhotoField");
   if (npf) npf.style.display = "none";
   clearNewCatPhoto();
+  var ndf = document.getElementById("addNewCatDescField");
+  if (ndf) ndf.style.display = "none";
+  var nd = document.getElementById("addNewCatDesc");
+  if (nd) nd.value = "";
   showModal("addModal");
 }
 function saveAddModal(){
@@ -4564,12 +4689,16 @@ function saveAddModal(){
   }
   var price = parseManagePrice(document.getElementById("addPrice").value);
   if (price === null) { manageToast("Indiquez un prix valide."); return; }
-  var note = document.getElementById("addNote").value.trim();
+  var addDescEl2 = document.getElementById("addDesc");
+  var desc = addDescEl2 ? addDescEl2.value.trim() : "";
   var id = "added-" + Date.now() + "-" + Math.floor(Math.random() * 1000);
-  var obj = { name: name, note: note, price: price, sectionId: sectionId };
+  var obj = { name: name, desc: desc, price: price, sectionId: sectionId };
   MENU_OVERRIDES = MENU_OVERRIDES || {};
   if (newSecId) {
     var secObj = { name: newCatName, fr: newCatFr, ar: newCatAr, createdAt: newSecCreatedAt };
+    var newCatDescEl = document.getElementById("addNewCatDesc");
+    var newCatDesc = newCatDescEl ? newCatDescEl.value.trim() : "";
+    if (newCatDesc) secObj.desc = newCatDesc;
     if (newCatPhoto) secObj.photo = newCatPhoto;
     overridesRef.child("sections/" + newSecId).set(secObj);
     (MENU_OVERRIDES.sections = MENU_OVERRIDES.sections || {})[newSecId] = secObj;
@@ -4719,6 +4848,162 @@ function commitSectionOrder(orderedIds){
   renderAvailability();
   renderMenuManage();
 }
+function editSectionBtnHTML(cat){
+  return '<button type="button" class="manage-btn edit manage-cat-edit" data-editcat="' + esc(cat.id) + '" aria-label="Modifier la catégorie ' + esc(cat.fr) + '">\u270e</button>';
+}
+function openEditSectionModal(sectionId){
+  var cat = null;
+  for (var i = 0; i < MENU.length; i++) if (MENU[i].id === sectionId) { cat = MENU[i]; break; }
+  if (!cat) return;
+  var nameEl = document.getElementById("editSectionNameSingle");
+  var arEl = document.getElementById("editSectionNameAr");
+  var frEl = document.getElementById("editSectionNameFr");
+  if (!nameEl && !(arEl && frEl)) return; /* modale absente : le port n'a pas opté pour edit_sections */
+  manageEditingSectionId = sectionId;
+  editCatPhoto = "";
+  editCatPhotoRemoved = false;
+  editCatPhotoOrig = (cat.photo && typeof cat.photo === 'string' && cat.photo.indexOf('data:image/') === 0) ? cat.photo : '';
+  var titleEl = document.getElementById("editSectionName");
+  if (titleEl) titleEl.textContent = cat.fr;
+  if (arEl && frEl) { arEl.value = cat.ar || cat.fr; frEl.value = cat.fr; }
+  else if (nameEl) nameEl.value = cat.fr;
+  var fileEl = document.getElementById("editSectionPhotoFile");
+  var descEl = document.getElementById("editSectionDesc");
+  if (descEl) descEl.value = cat.desc || "";
+  if (fileEl) fileEl.value = "";
+  showEditCatPhotoPreview();
+  showModal("editSectionModal");
+}
+function saveEditSectionModal(){
+  if (!overridesRef) { manageToast("Firebase indisponible \u2014 modification impossible pour l'instant."); return; }
+  var sectionId = manageEditingSectionId;
+  var cat = null;
+  for (var i = 0; i < MENU.length; i++) if (MENU[i].id === sectionId) { cat = MENU[i]; break; }
+  if (!cat) { hideModals(); return; }
+  var arEl = document.getElementById("editSectionNameAr");
+  var frEl = document.getElementById("editSectionNameFr");
+  var singleEl = document.getElementById("editSectionNameSingle");
+  var newAr = "", newFr = "";
+  if (arEl && frEl) {
+    newAr = arEl.value.trim();
+    newFr = frEl.value.trim();
+    if (!newAr || !newFr) { manageToast("Indiquez le nom de la catégorie en arabe et en français."); return; }
+  } else {
+    newFr = singleEl ? singleEl.value.trim() : "";
+    newAr = newFr;
+    if (!newFr) { manageToast("Indiquez le nom de la catégorie."); return; }
+  }
+  var nameChanged = (newFr !== cat.fr) || (newAr !== (cat.ar || cat.fr));
+  var photoChanged = !!editCatPhoto;
+  var photoRemoved = editCatPhotoRemoved && !editCatPhoto;
+  var descEl2 = document.getElementById("editSectionDesc");
+  var newDesc = descEl2 ? descEl2.value.trim() : (cat.desc || "");
+  var descChanged = (newDesc !== (cat.desc || ""));
+  var descRemoved = descChanged && !newDesc;
+  if (!nameChanged && !photoChanged && !photoRemoved && !descChanged) { hideModals(); return; }
+  MENU_OVERRIDES = MENU_OVERRIDES || {};
+  var secRec = (MENU_OVERRIDES.sections && MENU_OVERRIDES.sections[sectionId]) || null;
+  if (!secRec) {
+    /* Section de base sans enregistrement : .set du dossier complet
+       {name, fr, ar} (+ photo si choisie) — la section reste
+       vivante, jamais {deleted: true}. */
+    var rec = { name: newFr, fr: newFr, ar: newAr };
+    if (editCatPhoto) rec.photo = editCatPhoto;
+    if (newDesc) rec.desc = newDesc;
+    overridesRef.child("sections/" + sectionId).set(rec);
+    (MENU_OVERRIDES.sections = MENU_OVERRIDES.sections || {})[sectionId] = rec;
+  } else {
+    if (secRec.deleted) { hideModals(); return; } /* section supprimée : plus dans MENU, ne devrait pas arriver */
+    /* Enregistrement existant (section créée, ou base réordonnée
+       {order: N} seul) : .update des seuls champs changés —
+       createdAt / order survivent, jamais écrasés. */
+    var upd = {};
+    if (nameChanged) { upd.name = newFr; upd.fr = newFr; upd.ar = newAr; }
+    if (editCatPhoto) upd.photo = editCatPhoto;
+    if (descChanged && newDesc) upd.desc = newDesc;
+    if (Object.keys(upd).length) {
+      overridesRef.child("sections/" + sectionId).update(upd);
+      Object.keys(upd).forEach(function(k){ secRec[k] = upd[k]; });
+    }
+    if (photoRemoved) {
+      /* Retrait de la photo seule : .remove() sur la clé photo,
+         jamais une réécriture de l'enregistrement. */
+      overridesRef.child("sections/" + sectionId + "/photo").remove();
+      delete secRec.photo;
+    }
+    if (descRemoved) {
+      /* Retrait de la description seule : .remove()
+         sur la clé desc, jamais une réécriture de
+         l'enregistrement (et pas de desc: '' dans
+         le .update ci-dessus). */
+      overridesRef.child("sections/" + sectionId + "/desc").remove();
+      delete secRec.desc;
+    }
+  }
+  rebuildMenuFromOverrides();
+  renderAvailability();
+  renderMenuManage();
+  hideModals();
+  manageToast("Catégorie modifiée.");
+}
+function handleEditCatPhotoFile(file){
+  if (!file) return;
+  if ((file.type || "").indexOf("image/") !== 0) { if (typeof manageToast === "function") manageToast("Ce fichier n'est pas une image — choisissez une photo depuis la galerie."); return; }
+  var reader = new FileReader();
+  reader.onload = function(){
+    var img = new Image();
+    img.onload = function(){
+      var max = 480;
+      var scale = Math.min(1, max / Math.max(img.width, img.height));
+      var cw = Math.max(1, Math.round(img.width * scale));
+      var ch = Math.max(1, Math.round(img.height * scale));
+      var dataUrl = null;
+      try {
+        var canvas = document.createElement("canvas");
+        canvas.width = cw; canvas.height = ch;
+        var ctx = canvas.getContext("2d");
+        ctx.fillStyle = "#F4F8FC";
+        ctx.fillRect(0, 0, cw, ch);
+        ctx.drawImage(img, 0, 0, cw, ch);
+        dataUrl = canvas.toDataURL("image/jpeg", 0.8);
+      } catch (e) { dataUrl = null; }
+      editCatPhoto = dataUrl || reader.result;
+      editCatPhotoRemoved = false;
+      showEditCatPhotoPreview();
+    };
+    img.onerror = function(){ editCatPhoto = reader.result; editCatPhotoRemoved = false; showEditCatPhotoPreview(); };
+    img.src = reader.result;
+  };
+  reader.readAsDataURL(file);
+}
+function showEditCatPhotoPreview(){
+  /* Aperçu = la nouvelle photo choisie, sinon la photo actuelle —
+     sauf si « Supprimer la photo » a été demandé. Le bouton de
+     retrait ne s'affiche que quand une photo est visible. */
+  var shown = (!editCatPhotoRemoved && (editCatPhoto || editCatPhotoOrig)) || "";
+  var prev = document.getElementById("editSectionPhotoPreview");
+  if (prev) {
+    if (shown) { prev.src = shown; prev.style.display = ""; }
+    else prev.style.display = "none";
+  }
+  var rm = document.getElementById("editSectionPhotoRemove");
+  if (rm) rm.style.display = shown ? "" : "none";
+}
+function removeEditCatPhoto(){
+  editCatPhoto = "";
+  editCatPhotoRemoved = true;
+  var input = document.getElementById("editSectionPhotoFile");
+  if (input) input.value = "";
+  showEditCatPhotoPreview();
+}
+function clearEditCatPhoto(){
+  editCatPhoto = "";
+  editCatPhotoOrig = "";
+  editCatPhotoRemoved = false;
+  var input = document.getElementById("editSectionPhotoFile");
+  if (input) input.value = "";
+  showEditCatPhotoPreview();
+}
 var MANAGE_COLLAPSE_KEY = 'manage-collapsed-blueberry-menu-overrides'; /* clé localStorage de l'état replié, par client */
 var MANAGE_SECTION_COLLAPSE = true; /* bouton de repli affiché (opt-in du port) */
 function loadManageCollapsed(){
@@ -4766,7 +5051,7 @@ function wireMenuManage(){
        nom — un seul champ, ou les deux (arabe + français) quand la
        modale est bilingue. */
     var show = (e.target.value === "__new__");
-    ["addNewCatField", "addNewCatFieldAr", "addNewCatFieldFr", "addNewCatPhotoField"].forEach(function(id){
+    ["addNewCatField", "addNewCatFieldAr", "addNewCatFieldFr", "addNewCatDescField", "addNewCatPhotoField"].forEach(function(id){
       var f = document.getElementById(id);
       if (f) f.style.display = show ? "" : "none";
     });
@@ -4774,6 +5059,8 @@ function wireMenuManage(){
   document.getElementById("manageList").addEventListener("click", function (e) {
     var cc = closestAttr(e.target, "data-collapsecat");
     if (cc) { toggleManageCollapsed(cc.getAttribute("data-collapsecat")); return; }
+    var ec = closestAttr(e.target, "data-editcat");
+    if (ec) { openEditSectionModal(ec.getAttribute("data-editcat")); return; }
     if (closestAttr(e.target, "data-dragcat")) return; /* poignée de déplacement : un clic ne fait rien (ni suppression, ni édition) */
     var dc = closestAttr(e.target, "data-delcat");
     if (dc) { openDeleteSectionModal(dc.getAttribute("data-delcat")); return; }
@@ -4795,7 +5082,18 @@ function wireMenuManage(){
   if (dsc) dsc.addEventListener("click", confirmDeleteSectionModal);
   var dsx = document.getElementById("deleteSectionCancel");
   if (dsx) dsx.addEventListener("click", hideModals);
-  ["editModal", "addModal", "deleteModal", "deleteSectionModal"].forEach(function(id){
+  /* Modification de catégorie : boutons de la modale absents
+     quand le port n'a pas opté pour edit_sections — gardés,
+     pour que wireMenuManage ne casse jamais sans cette modale. */
+  var esv = document.getElementById("editSectionSave");
+  if (esv) esv.addEventListener("click", saveEditSectionModal);
+  var esx = document.getElementById("editSectionCancel");
+  if (esx) esx.addEventListener("click", hideModals);
+  var espf = document.getElementById("editSectionPhotoFile");
+  if (espf) espf.addEventListener("change", function(e){ var f = (e.target.files && e.target.files[0]) || null; handleEditCatPhotoFile(f); });
+  var espr = document.getElementById("editSectionPhotoRemove");
+  if (espr) espr.addEventListener("click", removeEditCatPhoto);
+  ["editModal", "addModal", "deleteModal", "deleteSectionModal", "editSectionModal"].forEach(function(id){
     var m = document.getElementById(id);
     if (m) m.addEventListener("click", function (e) { if (e.target === this) hideModals(); });
     /* Clavier (2026-11-15) : le champ focusé reste visible juste
@@ -4826,16 +5124,17 @@ function wireMenuManage(){
      (trop petit au doigt : le balayage sur l'en-tête ne faisait rien,
      le navigateur reprenait le geste pour défiler — pointercancel).
      Le bouton 🗑 (data-delcat) reste un bouton : un toucher dessus ne
-     déplace pas — comme le chevron de repli (data-collapsecat) : sans
-     cette exclusion, un tap sur le chevron partirait en déplacement
-     (capture du pointeur sur l'en-tête) et le clic ne replierait
-     jamais la catégorie. Suivi sur document (la capture du pointeur
-     n'existe pas partout), lâcher = validation du nouvel ordre. Pas de
-     déplacement pendant une recherche (liste filtrée). */
+     déplace pas — comme le chevron de repli (data-collapsecat) et le
+     bouton ✎ de modification (data-editcat) : sans cette exclusion, un
+     tap sur ✎ partirait en déplacement (capture du pointeur sur
+     l'en-tête) et le clic n'ouvrirait jamais la modale. Suivi sur
+     document (la capture du pointeur n'existe pas partout), lâcher =
+     validation du nouvel ordre. Pas de déplacement pendant une
+     recherche (liste filtrée). */
   var ml = document.getElementById("manageList");
   if (ml) ml.addEventListener("pointerdown", function(e){
     var _dt = e.target;
-    if (_dt && _dt.closest && _dt.closest("[data-delcat], [data-collapsecat]")) return; /* 🗑 / chevron : un toucher dessus ne déplace pas */
+    if (_dt && _dt.closest && _dt.closest("[data-delcat], [data-collapsecat], [data-editcat]")) return; /* 🗑 / chevron / ✎ : un toucher dessus ne déplace pas */
     var head = (_dt && _dt.closest) ? _dt.closest(".manage-cat-head") : null;
     if (!head) return;
     var grip = head.querySelector("[data-dragcat]");
