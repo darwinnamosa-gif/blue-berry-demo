@@ -858,9 +858,8 @@
       .bb-drawer-item:active { background: rgba(244,248,252,.08); border-left-color: #F2B705; }
 
       /* ---------- Déplacement tactile des catégories (Blue Berry) ---------- */
-      .manage-cat-head { touch-action: none; }
-      .manage-cat-name { cursor: grab; }
-      .manage-drag-grip { padding: 8px 10px; }
+      .manage-cat-head { touch-action: auto; }
+      .manage-drag-grip { padding: 13px 12px; }
       #manageList.dragging-active, #manageList.dragging-active * { touch-action: none; }
       /* ---------- En-tête : le chevron ne passe jamais seul à la ligne (Blue Berry, 2026-11-16) ----------
          Le bouton ✎ (ajouté à l'en-tête) a rétréci .manage-cat-name : son
@@ -5119,34 +5118,27 @@ function wireMenuManage(){
   var ncpc = document.getElementById("addNewCatPhotoClear");
   if (ncpc) ncpc.addEventListener("click", clearNewCatPhoto);
   /* Déplacement des catégories au doigt (Pointer Events) — Blue Berry
-     (2026-11-15, correctif local) : le déplacement part de TOUT
-     l'en-tête de catégorie (.manage-cat-head), pas du seul glyphe ☰
-     (trop petit au doigt : le balayage sur l'en-tête ne faisait rien,
-     le navigateur reprenait le geste pour défiler — pointercancel).
-     Le bouton 🗑 (data-delcat) reste un bouton : un toucher dessus ne
-     déplace pas — comme le chevron de repli (data-collapsecat) et le
-     bouton ✎ de modification (data-editcat) : sans cette exclusion, un
-     tap sur ✎ partirait en déplacement (capture du pointeur sur
-     l'en-tête) et le clic n'ouvrirait jamais la modale. Suivi sur
-     document (la capture du pointeur n'existe pas partout), lâcher =
-     validation du nouvel ordre. Pas de déplacement pendant une
-     recherche (liste filtrée). */
+     (2026-11-16, correctif local) : le déplacement part UNIQUEMENT de
+     la poignée ☰ (data-dragcat) — un toucher sur le libellé ou
+     ailleurs sur l'en-tête ne déplace pas, la page défile normalement
+     (Karim : « yt7ark ghit la darna click 3la dak drag »). La poignée
+     est une vraie cible de 44 px (padding 13px 12px, touch-action:
+     none), pas le glyphe ~30 px de 2026-11-15 qui faisait annuler le
+     geste. Suivi sur document (la capture du pointeur n'existe pas
+     partout), lâcher = validation du nouvel ordre. Pas de déplacement
+     pendant une recherche (liste filtrée). */
   var ml = document.getElementById("manageList");
   if (ml) ml.addEventListener("pointerdown", function(e){
-    var _dt = e.target;
-    if (_dt && _dt.closest && _dt.closest("[data-delcat], [data-collapsecat], [data-editcat]")) return; /* 🗑 / chevron / ✎ : un toucher dessus ne déplace pas */
-    var head = (_dt && _dt.closest) ? _dt.closest(".manage-cat-head") : null;
-    if (!head) return;
-    var grip = head.querySelector("[data-dragcat]");
+    var grip = closestAttr(e.target, "data-dragcat");
     if (!grip) return;
     if (manageQuery && manageQuery.trim()) return;
     if (e.preventDefault) e.preventDefault();
     dragCatId = grip.getAttribute("data-dragcat");
     dragToIndex = -1;
-    var held = head.closest ? head.closest(".manage-cat") : null;
+    var held = grip.closest ? grip.closest(".manage-cat") : null;
     if (held) held.classList.add("dragging");
     ml.classList.add("dragging-active"); /* touch-action: none partout pendant le déplacement */
-    if (head.setPointerCapture) { try { head.setPointerCapture(e.pointerId); } catch (err) {} }
+    if (grip.setPointerCapture) { try { grip.setPointerCapture(e.pointerId); } catch (err) {} }
     document.addEventListener("pointermove", onDragMove);
     document.addEventListener("pointerup", onDragEnd);
     document.addEventListener("pointercancel", onDragEnd);
