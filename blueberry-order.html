@@ -5,6 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="color-scheme" content="light" />
 <link rel="icon" href="data:," />
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="theme-color" content="#22303F" />
 <title>Blue Berry — Commander à table</title>
 <script>
 (function(){
@@ -4593,6 +4598,27 @@ function hideReadyBanner(){
 var readyBannerCloseBtn = document.getElementById('readyBannerClose');
 if (readyBannerCloseBtn) readyBannerCloseBtn.addEventListener('click', hideReadyBanner);
 
+/* iOS (2026-11-19) : le push web Safari exige l'app installée
+   (Ajout à l'écran d'accueil, iOS 16.4+) — dans un onglet Safari,
+   Notification et PushManager n'existent pas. L'état « unavailable »
+   y devient donc une consigne d'installation (voir setNotifStatus),
+   pas un message générique. Installée (standalone), le flux normal
+   (bouton « Activer les notifications » → jeton) s'applique. */
+function isIosDevice(){
+  try {
+    var ua = navigator.userAgent || '';
+    return /iPad|iPhone|iPod/.test(ua) ||
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  } catch(e){ return false; }
+}
+function isStandaloneApp(){
+  try {
+    if (navigator.standalone === true) return true;
+    return !!(window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+  } catch(e){ return false; }
+}
+function isIosBrowserTab(){ return isIosDevice() && !isStandaloneApp(); }
+
 /* Ligne d'état des notifications (2026-11-19) : sous le suivi, le
    client voit si le push « commande prête » est actif — et sinon
    pourquoi. État « default » (permission pas encore décidée, ex. le
@@ -4605,6 +4631,9 @@ function setNotifStatus(id, state){
   if (id !== successOrderId) return;
   var el = document.getElementById('orderNotifStatus');
   if (!el) return;
+  /* iPhone dans un onglet Safari : pas de push possible sans
+     installation — la consigne remplace le message générique. */
+  if (state === 'unavailable' && isIosBrowserTab()) state = 'ios';
   el.className = 'os-notif' + (state === 'ok' ? ' os-notif-ok' :
     (state === 'denied' || state === 'unavailable') ? ' os-notif-warn' : '');
   if (state === 'default') {
@@ -4621,6 +4650,7 @@ function setNotifStatus(id, state){
   el.textContent =
     state === 'ok' ? '🔔 Vous serez notifié quand votre commande est prête' :
     state === 'denied' ? 'Notifications refusées — activez-les dans les réglages du navigateur (Notifications → Autoriser pour ce site) pour être prévenu' :
+    state === 'ios' ? '📲 Pour être notifié sur iPhone : Partager → « Sur l’écran d’accueil », puis ouvrez Blue Berry depuis l’icône.' :
     state === 'unavailable' ? 'Notifications non disponibles sur ce navigateur' :
     '🔔 Activation des notifications…';
 }
