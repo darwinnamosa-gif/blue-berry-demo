@@ -561,6 +561,19 @@
   .os-line{ flex:1; height:2.5px; background:var(--line); margin-top:12px; border-radius:2px; }
   .os-msg{ margin:10px 0 2px; font-size:15.5px; font-weight:800; color:var(--black); }
   .order-status.os-cancelled .os-msg{ color:var(--red-ink); }
+  /* État des notifications (2026-11-19) : ligne visible sous le suivi —
+     le client voit si le push « commande prête » est actif, et sinon
+     pourquoi (refusé / non disponible). */
+  .os-notif{ margin:8px 0 2px; font-size:13.5px; font-weight:700; color:var(--muted); }
+  .os-notif:empty{ display:none; }
+  .os-notif.os-notif-ok{ color:var(--green); }
+  .os-notif.os-notif-warn{ color:var(--red-ink); }
+  .os-notif-btn{
+    background:var(--yellow); color:var(--black); border:none; cursor:pointer;
+    border-radius:999px; padding:9px 16px; font-size:14px; font-weight:800;
+    box-shadow:0 2px 8px rgba(0,0,0,.18);
+  }
+  .os-notif-btn:active{ transform:scale(.97); }
   @keyframes os-pulse{ 0%,100%{ transform:scale(1); } 50%{ transform:scale(1.18); } }
   .ready-banner{
     position:fixed; top:0; left:0; right:0; z-index:95;
@@ -652,6 +665,7 @@
           <div class="os-step" data-step="ready"><span class="os-dot"></span><span class="os-lbl">Prête</span></div>
         </div>
         <p class="os-msg" id="orderStatusMsg">Commande envoyée au comptoir…</p>
+        <p class="os-notif" id="orderNotifStatus"></p>
       </div>
       <div class="pay-note">
         Paiement au comptoir quand vous aurez terminé.
@@ -4438,10 +4452,14 @@ function sendOrder(items, total, table, mode, note){
    commande en direct : Envoyée → En préparation → Prête. Quand le
    comptoir passe la commande à « ready » (bouton Prête, nœud
    blueberry-orders/<id>/status), le client est prévenu :
-   - page visible : bannière verte + son (3 bips) + vibration ;
+   - page visible : bannière verte + son (3 salves de 3 bips, rappel
+     après 15 s si la bannière n'est pas fermée) + vibration ;
    - page en arrière-plan : notification système (API Notification,
      permission demandée au moment de commander, jamais au chargement) ;
      la bannière attend le retour au premier plan, sans second son.
+   Une ligne d'état sous le suivi montre si le push est actif — et
+   sinon pourquoi (bouton « Activer les notifications » si la
+   permission n'est pas décidée, refus, navigateur non compatible).
    Une seule alerte par commande (transition vers ready). Les commandes
    de l'appareil sont mémorisées (localStorage) : si le client rouvre la
    page et que sa commande est déjà prête, la bannière s'affiche sans
@@ -4488,7 +4506,11 @@ function unlockReadyAudio(){
     if (readyAudioCtx && readyAudioCtx.state === 'suspended') readyAudioCtx.resume();
   } catch(e){}
 }
-function beepReady(){
+/* Réglages de l'alerte (exposés pour les tests automatisés). */
+var READY_CFG = { beepRoundMs: 1500, rebeepDelay: 15000, retryDelay: 2000 };
+if (typeof window !== 'undefined') window.__BB_READY_CFG = READY_CFG;
+var readyBeepTimers = [];
+function beepReadyRound(){
   try {
     if (!readyAudioCtx) return;
     if (readyAudioCtx.state === 'suspended') readyAudioCtx.resume();
@@ -4505,14 +4527,44 @@ function beepReady(){
     });
   } catch(e){}
 }
+/* Alerte sonore renforcée (2026-11-19) : 3 salves de 3 bips sur ~4 s,
+   puis une salve de rappel si la bannière est toujours affichée après
+   15 s. Fermer la bannière arrête tout (stopReadyBeeps). */
+function beepReady(){
+  stopReadyBeeps();
+  beepReadyRound();
+  readyBeepTimers.push(setTimeout(beepReadyRound, READY_CFG.beepRoundMs));
+  readyBeepTimers.push(setTimeout(beepReadyRound, READY_CFG.beepRoundMs * 2));
+  readyBeepTimers.push(setTimeout(function(){
+    var b = document.getElementById('readyBanner');
+    if (b && b.classList.contains('show')) beepReadyRound();
+  }, READY_CFG.rebeepDelay));
+}
+function stopReadyBeeps(){
+  readyBeepTimers.forEach(function(t){ clearTimeout(t); });
+  readyBeepTimers = [];
+}
 function vibrateReady(){
-  try { if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 300]); } catch(e){}
+  try { if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 400]); } catch(e){}
 }
 function requestNotifyPermission(){
   try {
     if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
       var p = Notification.requestPermission();
-      if (p && typeof p.catch === 'function') p.catch(function(){});
+      if (p && typeof p.then === 'function') {
+        p.then(function(result){
+          if (result === 'granted') {
+            /* La permission arrive souvent APRÈS l'envoi de la commande
+               (le client tape « Autoriser » une fois la commande partie) :
+               relancer l'enregistrement du jeton push pour la commande
+               affichée et les commandes mémorisées encore actives. */
+            if (successOrderId) registerPushToken(successOrderId);
+            myOrdersLoad().forEach(function(e){ registerPushToken(e.id); });
+          } else if (result === 'denied' && successOrderId) {
+            setNotifStatus(successOrderId, 'denied');
+          }
+        }).catch(function(){});
+      }
     }
   } catch(e){}
 }
@@ -4534,11 +4586,44 @@ function showReadyBanner(table){
   if (b) b.classList.add('show');
 }
 function hideReadyBanner(){
+  stopReadyBeeps();
   var b = document.getElementById('readyBanner');
   if (b) b.classList.remove('show');
 }
 var readyBannerCloseBtn = document.getElementById('readyBannerClose');
 if (readyBannerCloseBtn) readyBannerCloseBtn.addEventListener('click', hideReadyBanner);
+
+/* Ligne d'état des notifications (2026-11-19) : sous le suivi, le
+   client voit si le push « commande prête » est actif — et sinon
+   pourquoi. État « default » (permission pas encore décidée, ex. le
+   prompt du navigateur ne s'est jamais affiché) : un BOUTON demande
+   la permission depuis le tap direct (geste utilisateur fiable) ;
+   accordée → l'enregistrement du jeton démarre (registerPushToken,
+   via le .then de requestNotifyPermission) ; refusée → les
+   instructions pour l'activer dans les réglages du navigateur. */
+function setNotifStatus(id, state){
+  if (id !== successOrderId) return;
+  var el = document.getElementById('orderNotifStatus');
+  if (!el) return;
+  el.className = 'os-notif' + (state === 'ok' ? ' os-notif-ok' :
+    (state === 'denied' || state === 'unavailable') ? ' os-notif-warn' : '');
+  if (state === 'default') {
+    el.innerHTML = '';
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'os-notif-btn';
+    btn.id = 'notifEnableBtn';
+    btn.textContent = '🔔 Activer les notifications';
+    btn.addEventListener('click', function(){ requestNotifyPermission(); });
+    el.appendChild(btn);
+    return;
+  }
+  el.textContent =
+    state === 'ok' ? '🔔 Vous serez notifié quand votre commande est prête' :
+    state === 'denied' ? 'Notifications refusées — activez-les dans les réglages du navigateur (Notifications → Autoriser pour ce site) pour être prévenu' :
+    state === 'unavailable' ? 'Notifications non disponibles sur ce navigateur' :
+    '🔔 Activation des notifications…';
+}
 
 function renderOrderStatus(id, st){
   if (id !== successOrderId) return;
@@ -4613,6 +4698,7 @@ function trackPlacedOrder(id, table){
   successOrderId = id;
   watchMyOrder(id, table);
   myOrdersRemember(id, table);
+  setNotifStatus(id, 'pending');
   phase2PushHook(id);
   renderOrderStatus(id, 'new');
 }
@@ -4635,43 +4721,103 @@ function startMyOrdersWatch(){
    firebase-messaging-sw.js (même dossier que la page, scope
    /blue-berry-demo/) affiche la notification et rouvre la page au
    clic.
-   Conditions, toutes silencieuses en cas d'échec (la phase 1
-   continue de fonctionner exactement comme avant) : permission
-   Notification DÉJÀ accordée (demandée une seule fois au moment de
-   commander — voir requestNotifyPermission ; jamais au chargement,
-   jamais re-demandée si refusée), service workers disponibles, SDK
-   messaging chargé. Le jeton stocké est relu avant écriture :
-   réécrit seulement s'il a changé (rafraîchissement au
-   rechargement). Aucun autre écrit Firebase ; sans commande, aucun
-   écrit au chargement. Sur iPhone, le push page fermée exige l'app
-   installée (PWA) ; sur Android Chrome, il fonctionne dans le
-   navigateur. */
+   Conditions (la phase 1 continue de fonctionner exactement comme
+   avant en cas d'échec, mais l'échec est désormais VISIBLE dans la
+   ligne d'état du suivi — setNotifStatus) : permission Notification
+   DÉJÀ accordée (demandée une seule fois au moment de commander —
+   voir requestNotifyPermission ; jamais au chargement, jamais
+   re-demandée si refusée ; si le prompt ne s'est jamais affiché, le
+   bouton « Activer les notifications » la redemande depuis le tap
+   du client, et l'accord relance cet enregistrement), service
+   workers disponibles, SDK messaging chargé et compatible
+   (isSupported). Le service worker est attendu ACTIF avant getToken
+   (waitForActiveWorker — à la première visite il est encore en
+   installation), et getToken est réessayé une fois après 2 s. Le
+   jeton stocké est relu avant écriture : réécrit seulement s'il a
+   changé (rafraîchissement au rechargement). Aucun autre écrit
+   Firebase ; sans commande, aucun écrit au chargement. Sur iPhone,
+   le push page fermée exige l'app installée (PWA) ; sur Android
+   Chrome, il fonctionne dans le navigateur. */
 var FCM_VAPID_KEY = 'BAMN8KJV1wXBzhiOEEZDmWad_7JlJr2YK5X0eSNd8j4ipHoI8HxrY7Djn9cHgX0nOVJHtxDkgSkp9Lk5apcfeXw';
 var fcmSwRegPromise = null; /* enregistrement du service worker (une fois par page) */
 var fcmTokenByOrder = {};   /* id -> dernier jeton écrit (évite les réécritures) */
+var fcmTokenPending = {};   /* id -> true pendant l'enregistrement (anti-doublon) */
+
+/* Attend que le service worker soit ACTIF avant getToken : à la
+   première visite, register() résout alors que le worker est encore
+   en installation, et getToken (pushManager.subscribe) peut échouer
+   silencieusement — c'est le piège classique du premier essai. */
+function waitForActiveWorker(reg){
+  return new Promise(function(resolve){
+    try {
+      if (!reg || reg.active) return resolve(reg);
+      var worker = reg.installing || reg.waiting;
+      if (!worker) return resolve(reg);
+      var done = false;
+      var finish = function(){ if (!done) { done = true; resolve(reg); } };
+      worker.addEventListener('statechange', function(){
+        if (worker.state === 'activated' || reg.active) finish();
+      });
+      setTimeout(finish, 8000); /* filet : ne jamais bloquer indéfiniment */
+    } catch(e){ resolve(reg); }
+  });
+}
+function getTokenWithRetry(reg){
+  return firebase.messaging().getToken({ vapidKey: FCM_VAPID_KEY, serviceWorkerRegistration: reg })
+    .catch(function(){
+      return new Promise(function(resolve){ setTimeout(resolve, READY_CFG.retryDelay); })
+        .then(function(){
+          return firebase.messaging().getToken({ vapidKey: FCM_VAPID_KEY, serviceWorkerRegistration: reg });
+        });
+    });
+}
 
 function registerPushToken(id){
   try {
-    if (!id) return;
-    if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
-    if (!('serviceWorker' in navigator)) return;
-    if (typeof firebase === 'undefined' || !firebase.messaging) return;
+    if (!id || fcmTokenPending[id]) return;
+    if (typeof Notification === 'undefined') { setNotifStatus(id, 'unavailable'); return; }
+    if (Notification.permission === 'denied') { setNotifStatus(id, 'denied'); return; }
+    /* Permission pas encore décidée (le prompt ne s'est peut-être
+       jamais affiché) : la ligne d'état montre le bouton
+       « Activer les notifications » ; le .then de
+       requestNotifyPermission relancera cet enregistrement. */
+    if (Notification.permission !== 'granted') { setNotifStatus(id, 'default'); return; }
+    if (!('serviceWorker' in navigator)) { setNotifStatus(id, 'unavailable'); return; }
+    if (typeof firebase === 'undefined' || !firebase.messaging) { setNotifStatus(id, 'unavailable'); return; }
     getDb(); /* initialise l'app Firebase si besoin (messaging en dépend) */
-    if (!fcmSwRegPromise) {
-      fcmSwRegPromise = navigator.serviceWorker.register('firebase-messaging-sw.js', { scope: './' });
-    }
-    fcmSwRegPromise.then(function(reg){
-      return firebase.messaging().getToken({ vapidKey: FCM_VAPID_KEY, serviceWorkerRegistration: reg });
+    fcmTokenPending[id] = true;
+    setNotifStatus(id, 'pending');
+    var supported = (typeof firebase.messaging.isSupported === 'function')
+      ? firebase.messaging.isSupported()
+      : Promise.resolve(true);
+    Promise.resolve(supported).then(function(ok){
+      if (!ok) return null;
+      if (!fcmSwRegPromise) {
+        fcmSwRegPromise = navigator.serviceWorker.register('firebase-messaging-sw.js', { scope: './' });
+        fcmSwRegPromise.catch(function(){ fcmSwRegPromise = null; }); /* réessai possible plus tard */
+      }
+      return fcmSwRegPromise;
+    }).then(function(reg){
+      if (!reg) return null;
+      return waitForActiveWorker(reg);
+    }).then(function(reg){
+      if (!reg) return null;
+      return getTokenWithRetry(reg);
     }).then(function(token){
-      if (!token || fcmTokenByOrder[id] === token) return;
+      fcmTokenPending[id] = false;
+      if (!token) { setNotifStatus(id, 'unavailable'); return; }
+      if (fcmTokenByOrder[id] === token) { setNotifStatus(id, 'ok'); return; }
       var ref = getDb().ref('blueberry-orders/' + id + '/pushToken');
       return ref.once('value').then(function(snap){
-        if (snap.val() === token) { fcmTokenByOrder[id] = token; return; }
-        return ref.set(token).then(function(){ fcmTokenByOrder[id] = token; });
+        if (snap.val() === token) { fcmTokenByOrder[id] = token; setNotifStatus(id, 'ok'); return; }
+        return ref.set(token).then(function(){ fcmTokenByOrder[id] = token; setNotifStatus(id, 'ok'); });
       }).catch(function(){
-        return ref.set(token).then(function(){ fcmTokenByOrder[id] = token; });
+        return ref.set(token).then(function(){ fcmTokenByOrder[id] = token; setNotifStatus(id, 'ok'); });
       });
-    }).catch(function(){ /* silencieux : la phase 1 reste le chemin de secours */ });
+    }).catch(function(){
+      fcmTokenPending[id] = false;
+      setNotifStatus(id, 'unavailable');
+    });
   } catch(e){}
 }
 function phase2PushHook(id){
