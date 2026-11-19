@@ -882,6 +882,13 @@
       }
       .ticket-btn:active { transform: scale(0.98); }
       .bill-card .ticket-btn { min-height: 42px; padding: 8px 14px; font-size: 14px; }
+      .hist-row { display: flex; align-items: center; gap: 10px; padding: 9px 2px; border-bottom: 1px solid var(--line); }
+      .hist-row:last-child { border-bottom: 0; }
+      .hist-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+      .hist-main strong { font-size: 14px; }
+      .hist-main small { color: var(--muted); font-size: 12px; }
+      .hist-total { font-weight: 900; white-space: nowrap; }
+      .hist-row .ticket-btn { min-height: 36px; padding: 5px 10px; font-size: 12.5px; }
       .ticket-modal-box { max-width: 380px; }
       .ticket-actions { flex-wrap: wrap; }
       .ticket-actions .bb-btn { flex: 1 1 auto; }
@@ -905,6 +912,7 @@
       .rc-irow { display: flex; justify-content: space-between; gap: 10px; }
       .rc-total { display: flex; justify-content: space-between; font-size: 16px; font-weight: 900; }
       .rc-pay { text-align: center; font-weight: 800; margin-top: 4px; }
+      .rc-staff { text-align: center; font-size: 11px; margin-top: 2px; }
       .rc-foot { text-align: center; font-weight: 700; }
       #ticketPrint { display: none; }
       @page { size: 80mm auto; margin: 0; }
@@ -913,6 +921,41 @@
         #ticketPrint { display: block !important; }
         #ticketPrint .receipt { border: none; box-shadow: none; width: 80mm; }
       }
+
+      /* ---------- Profils du personnel (2026-11-19) ---------- */
+      main.layout[data-view="orders"] #staffSection,
+      main.layout[data-view="stats"] #staffSection,
+      main.layout[data-view="avail"] #staffSection,
+      main.layout[data-view="manage"] #staffSection { display: none !important; }
+      main.layout[data-view="staff"] #tabs,
+      main.layout[data-view="staff"] #ordersList,
+      main.layout[data-view="staff"] #emptyState,
+      main.layout[data-view="staff"] #doneSection,
+      main.layout[data-view="staff"] .bills,
+      main.layout[data-view="staff"] #statsSection,
+      main.layout[data-view="staff"] #availSection,
+      main.layout[data-view="staff"] #manageSection { display: none !important; }
+      body.staff-session .owner-only { display: none !important; }
+      .staff-chip {
+        display: inline-flex; align-items: center; min-height: 36px;
+        padding: 4px 12px; border-radius: 999px; font-size: 13.5px; font-weight: 900;
+        background: var(--yellow-soft); color: var(--black); border: 1px solid var(--yellow);
+        white-space: nowrap;
+      }
+      .staff-chip[hidden] { display: none !important; }
+      .staff-body { display: none; margin-top: 12px; }
+      .staff.open .staff-body { display: block; }
+      .staff-intro { color: var(--muted); font-size: 13.5px; margin: 0 0 12px; }
+      .staff-row { display: flex; align-items: center; gap: 10px; padding: 10px 2px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+      .staff-row:last-child { border-bottom: 0; }
+      .staff-main { flex: 1; min-width: 140px; display: flex; flex-direction: column; }
+      .staff-main strong { font-size: 15px; }
+      .staff-main small { color: var(--muted); font-size: 12.5px; }
+      .staff-form { margin-top: 16px; padding-top: 14px; border-top: 2px solid var(--line); }
+      .staff-form-title { font-size: 16px; font-weight: 900; margin-bottom: 10px; }
+      .staff-error { color: #B91C1C; font-weight: 800; font-size: 14px; margin: 8px 0; }
+      .staff-form-actions { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+      .handled-by { color: var(--muted); font-size: 13px; font-weight: 700; margin-top: 6px; }
 
 </style>
   </head>
@@ -962,6 +1005,7 @@
           <svg class="ico-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4V5z" fill="currentColor" stroke="none"/><line x1="16" y1="9" x2="22" y2="15"/><line x1="22" y1="9" x2="16" y2="15"/></svg>
           <span id="soundLabel">Son activé</span>
         </button>
+        <span class="staff-chip" id="staffChip" hidden></span>
         <button class="lock-btn" id="lockBtn" type="button" title="Verrouiller" aria-label="Verrouiller le comptoir">🔒</button>
       </div>
     </header>
@@ -971,9 +1015,10 @@
         <div class="bb-drawer-logo"><span class="bb-lockup"><span class="bb-word"><span class="bb-name">BLUE BERRY</span><span class="bb-since">DEPUIS 1998</span></span><svg class="bb-cluster" viewBox="0 0 120 118" aria-hidden="true"><path d="M60 36 C 76 24, 90 16, 95 5" fill="none" stroke="#77A3DC" stroke-width="5" stroke-linecap="round"/><path d="M52 38 Q 50 22, 64 16 Q 66 30, 52 38 Z" fill="#77A3DC" stroke="#fff" stroke-width="1.5"/><g fill="#77A3DC" stroke="#fff" stroke-width="2"><circle cx="60" cy="34" r="10"/><circle cx="42" cy="48" r="11"/><circle cx="78" cy="48" r="11"/><circle cx="27" cy="64" r="11"/><circle cx="57" cy="64" r="12"/><circle cx="87" cy="64" r="11"/><circle cx="41" cy="82" r="11"/><circle cx="71" cy="82" r="11"/><circle cx="56" cy="98" r="11"/><circle cx="30" cy="46" r="8"/><circle cx="90" cy="46" r="8"/></g><g fill="#fff"><circle cx="56" cy="30" r="1.8"/><circle cx="38" cy="44" r="1.8"/><circle cx="74" cy="44" r="1.8"/><circle cx="23" cy="60" r="1.8"/><circle cx="53" cy="60" r="1.8"/><circle cx="83" cy="60" r="1.8"/><circle cx="37" cy="78" r="1.8"/><circle cx="67" cy="78" r="1.8"/><circle cx="52" cy="94" r="1.8"/></g><circle cx="106" cy="14" r="9" fill="#fff" stroke="#77A3DC" stroke-width="2"/><text x="106" y="18" font-size="11" font-weight="700" text-anchor="middle" fill="#77A3DC" font-family="system-ui,Arial,sans-serif">R</text></svg></span></div>
         <button class="bb-drawer-close" id="drawerClose" type="button" aria-label="Fermer le menu">✕</button>
       </div>
-      <button class="bb-drawer-item" type="button" data-view-link="stats">📊 Statistiques</button>
-      <button class="bb-drawer-item" type="button" data-view-link="avail">🍽️ Disponibilité des plats</button>
-      <button class="bb-drawer-item" type="button" data-view-link="manage">✏️ Gérer le menu</button>
+      <button class="bb-drawer-item owner-only" type="button" data-view-link="stats">📊 Statistiques</button>
+      <button class="bb-drawer-item owner-only" type="button" data-view-link="avail">🍽️ Disponibilité des plats</button>
+      <button class="bb-drawer-item owner-only" type="button" data-view-link="manage">✏️ Gérer le menu</button>
+      <button class="bb-drawer-item owner-only" type="button" data-view-link="staff">👥 Profils du personnel</button>
     </nav>
 
 
@@ -1027,6 +1072,29 @@
           </div>
         </section>
 
+        <section class="staff" id="staffSection">
+          <button class="bb-back" type="button">← Commandes</button>
+          <button class="staff-toggle" id="staffToggle" type="button">
+            👥 Profils du personnel
+            <span class="chev">▼</span>
+          </button>
+          <div class="staff-body" id="staffBody">
+            <p class="staff-intro">Chaque membre du personnel se connecte avec son code (4 chiffres). Ses actions sur les commandes sont signées de son nom.</p>
+            <div id="staffList"></div>
+            <div class="staff-form">
+              <div class="staff-form-title" id="staffFormTitle">Nouveau profil</div>
+              <div class="bb-field"><label for="staffName">Nom *</label><input id="staffName" type="text" autocomplete="off" /></div>
+              <div class="bb-field"><label for="staffPin">Code (PIN, 4 chiffres) *</label><input id="staffPin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" /></div>
+              <div class="bb-field"><label for="staffMatricule">Matricule (optionnel)</label><input id="staffMatricule" type="text" autocomplete="off" /></div>
+              <div class="bb-field"><label for="staffPhone">Téléphone (optionnel)</label><input id="staffPhone" type="tel" autocomplete="off" /></div>
+              <div class="staff-error" id="staffError" hidden></div>
+              <div class="staff-form-actions">
+                <button class="bb-btn primary" id="staffSaveBtn" type="button">Enregistrer</button>
+                <button class="bb-btn ghost" id="staffCancelEdit" type="button" hidden>Annuler</button>
+              </div>
+            </div>
+          </div>
+        </section>
         <section class="stats" id="statsSection">
           <button class="bb-back" type="button">← Commandes</button>
           <button class="stats-toggle" id="statsToggle" type="button">
@@ -1046,6 +1114,8 @@
             </div>
             <div class="top-title">🏆 Top plats</div>
             <div id="topPlatsList"></div>
+            <div class="top-title">🧾 Historique des commandes</div>
+            <div id="statsHistoryList"></div>
           </div>
         </section>
       </section>
@@ -5217,9 +5287,10 @@ function wireMenuManage(){
    des plats et Gérer le menu s'ouvrent comme des vues pleines depuis
    le tiroir (☰, à gauche). « ← Commandes » revient aux commandes. */
 function showCounterView(name){
+  if (typeof currentStaff === "function" && currentStaff() && name !== "orders") name = "orders";
   var main = document.querySelector("main.layout");
   if (main) main.setAttribute("data-view", name);
-  var sections = { stats: "statsSection", avail: "availSection", manage: "manageSection" };
+  var sections = { stats: "statsSection", avail: "availSection", manage: "manageSection", staff: "staffSection" };
   Object.keys(sections).forEach(function(k){
     var sec = document.getElementById(sections[k]);
     if (sec) sec.classList.toggle("open", k === name);
@@ -6428,6 +6499,7 @@ function wireCounterDrawer(){
           '</div>' +
           '<ul class="items">' + items + '</ul>' +
           ((o.note && String(o.note).trim()) ? '<div class="order-note" dir="auto">📝 Note : ' + esc(o.note) + '</div>' : '') +
+          (o.handledBy ? '<div class="handled-by">👤 ' + esc(o.handledBy) + '</div>' : '') +
           '<div class="card-foot"><div class="total">Total<strong>' + fmt(orderTotal(o)) + ' DH</strong></div>' + foot + '</div>' +
         '</article>';
       }
@@ -6592,6 +6664,29 @@ function wireCounterDrawer(){
               '</span><span class="top-qty">×' + r.qty + '</span></div>';
           }).join("");
         }
+        // Historique des commandes du jour (2026-11-19) : chaque commande
+        // servie garde son bouton Ticket ici aussi (même modale).
+        var histEl = document.getElementById("statsHistoryList");
+        if (histEl) {
+          var hist = Object.keys(orders).map(function (id) {
+            var o = orders[id]; if (o) o._id = id; return o;
+          }).filter(function (o) { return o && isToday(o.createdAt); })
+            .sort(function (a, b) { return (b.createdAt || 0) - (a.createdAt || 0); });
+          if (!hist.length) {
+            histEl.innerHTML = '<div class="top-empty">Aucune commande ce jour.</div>';
+          } else {
+            histEl.innerHTML = hist.map(function (o) {
+              var st = o.status || "new";
+              var flow = STATUS_FLOW[st] || STATUS_FLOW["new"];
+              return '<div class="hist-row">' +
+                '<span class="hist-main"><strong>Table ' + esc(o.table != null ? o.table : "?") + '</strong>' +
+                '<small>' + esc(timeLabel(o.createdAt)) + ' · ' + esc(flow.chip) + (st === "served" && o.paid ? ' · Payée ✓' : '') + (o.handledBy ? ' · 👤 ' + esc(o.handledBy) : '') + '</small></span>' +
+                '<span class="hist-total">' + fmt(orderTotal(o)) + ' DH</span>' +
+                (st === "served" ? '<button class="ticket-btn" type="button" data-ticket-order="' + esc(o._id) + '">🧾 Ticket</button>' : '') +
+                '</div>';
+            }).join("");
+          }
+        }
       }
 
 
@@ -6676,13 +6771,24 @@ function wireCounterDrawer(){
       /* ---------------- Actions ---------------- */
       var ordersRef = null;
       var cancelledRef = null;
+      var staffRef = null;
+      var staffProfiles = {};
 
       function setStatus(id, next) {
+        var sn = (typeof stampName === "function") ? stampName() : null;
         if (previewMode) {
-          if (orders[id]) { orders[id].status = next; render(); }
+          if (orders[id]) {
+            orders[id].status = next;
+            if (sn) { orders[id].handledBy = sn; if (next === "served") orders[id].servedBy = sn; }
+            render();
+          }
           return;
         }
-        if (ordersRef) { ordersRef.child(id).update({ status: next }); }
+        if (ordersRef) {
+          var upd = { status: next };
+          if (sn) { upd.handledBy = sn; if (next === "served") upd.servedBy = sn; }
+          ordersRef.child(id).update(upd);
+        }
       }
       function deleteOrder(id) {
         // Safety: only a finished order (served or cancelled) can ever be deleted.
@@ -6725,12 +6831,16 @@ function wireCounterDrawer(){
         if (cancelledRef && Object.keys(cancelledUpdates).length) { cancelledRef.update(cancelledUpdates); }
       }
       function markTablePaid(table) {
+        var sn = (typeof stampName === "function") ? stampName() : null;
         var updates = {};
         Object.keys(orders).forEach(function (id) {
           var o = orders[id];
           if (Number(o.table) === table && o.status === "served" && !o.paid) {
-            if (previewMode) { o.paid = true; }
-            else { updates[id + "/paid"] = true; }
+            if (previewMode) { o.paid = true; if (sn) { o.paidBy = sn; o.handledBy = sn; } }
+            else {
+              updates[id + "/paid"] = true;
+              if (sn) { updates[id + "/paidBy"] = sn; updates[id + "/handledBy"] = sn; }
+            }
           }
         });
         if (previewMode) { render(); return; }
@@ -6848,6 +6958,7 @@ function wireCounterDrawer(){
         ordersRef = db.ref("blueberry-orders");
         cancelledRef = db.ref("blueberry-cancelled");
         availRef = db.ref("blueberry-availability");
+        staffRef = db.ref("blueberry-staff");
         overridesRef = db.ref("blueberry-menu-overrides");
         /* Overrides du menu (ajout/modif/suppression par le propriétaire) :
            une lecture, puis le menu affiché est reconstruit. */
@@ -6859,6 +6970,12 @@ function wireCounterDrawer(){
         availRef.on("value", function (snap) {
           availability = snap.val() || {};
           renderAvailability();
+        });
+        staffRef.on("value", function (snap) {
+          staffProfiles = snap.val() || {};
+          gateProfiles = staffProfiles;
+          cacheStaffProfiles(staffProfiles);
+          if (typeof renderStaffProfiles === "function") renderStaffProfiles();
         });
         setConn("", "Connexion…");
         db.ref(".info/connected").on("value", function (snap) {
@@ -6914,7 +7031,7 @@ function wireCounterDrawer(){
           renderAvailability();
         } else {
           try {
-            firebase.initializeApp(FIREBASE_CONFIG);
+            if (!firebase.apps || !firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
             /* Anonymous sign-in gates ALL database access (rules: auth != null).
                Listeners start only once a user exists; on failure the page
                shows its honest error state and never loads preview orders. */
@@ -6967,6 +7084,7 @@ function wireCounterDrawer(){
         try { localStorage.setItem(UNLOCK_KEY, "1"); } catch (e) { /* stockage indisponible : déverrouillage pour cette visite seulement */ }
       }
       function showAppAndStart() {
+        if (typeof applySessionUI === "function") applySessionUI();
         pinGate.hidden = true;
         appWrap.hidden = false;
         notifyStatsVisible(true);
@@ -7015,13 +7133,19 @@ function wireCounterDrawer(){
       pinForm.addEventListener("submit", function (e) {
         e.preventDefault();
         if (isLockedOut()) { startLockoutTimer(); return; }
-        if (pinInput.value === PIN_CODE) {
+        var enteredPin = pinInput.value;
+        var unlockAs = function (sess) {
           pinError.hidden = true;
           try { localStorage.removeItem(LOCKOUT_KEY); } catch (err) { /* ignore */ }
+          if (typeof setSession === "function") setSession(sess);
           rememberUnlock();
           pinInput.value = "";
           showAppAndStart();
-        } else {
+        };
+        if (enteredPin === PIN_CODE) { unlockAs({ role: "owner" }); return; }
+        var staffMatch = (typeof findStaffByPin === "function") ? findStaffByPin(enteredPin) : null;
+        if (staffMatch) { unlockAs({ role: "staff", id: staffMatch.id, name: staffMatch.name }); return; }
+        {
           notifyStatsVisible(false);
           pinError.hidden = false;
           pinInput.value = "";
@@ -7040,6 +7164,7 @@ function wireCounterDrawer(){
         try {
           localStorage.removeItem(UNLOCK_KEY);
           localStorage.removeItem(LOCKOUT_KEY);
+          localStorage.removeItem("blueberry_counter_session_v1");
         } catch (e) { /* ignore */ }
         location.reload();
       });
@@ -7062,6 +7187,7 @@ function wireCounterDrawer(){
         notifyStatsVisible(false);
         appWrap.hidden = true;
         pinGate.hidden = false;
+        if (typeof loadGateProfiles === "function") loadGateProfiles();
         if (isLockedOut()) {
           pinError.hidden = false;
           startLockoutTimer();
@@ -7101,11 +7227,13 @@ function wireCounterDrawer(){
       }
       function ticketDataFromOrders(list) {
         if (!list || !list.length) return null;
-        var merged = [], byKey = {}, total = 0, latest = null, paid = true;
+        var merged = [], byKey = {}, total = 0, latest = null, paid = true, staffNames = [];
         list.forEach(function (o) {
           total += orderTotal(o);
           if (!o.paid) paid = false;
           if (!latest || (o.createdAt || 0) > (latest.createdAt || 0)) latest = o;
+          var sn = o.servedBy || o.handledBy;
+          if (sn && staffNames.indexOf(sn) === -1) staffNames.push(sn);
           itemsArray(o).forEach(function (i) {
             var name = String(i.name || ""), price = Number(i.price) || 0, qty = Number(i.qty) || 1;
             var key = name + "|" + price;
@@ -7121,7 +7249,7 @@ function wireCounterDrawer(){
           mode: mode,
           modeLabel: mode === "emporter" ? "À emporter" : "Sur place",
           date: ts, dateLabel: ticketDateLabel(ts),
-          items: merged, total: total, paid: paid, count: list.length
+          items: merged, total: total, paid: paid, count: list.length, staff: staffNames
         };
       }
       function ticketDataForOrder(id) {
@@ -7157,6 +7285,9 @@ function wireCounterDrawer(){
           '<div class="rc-sep"></div>' +
           '<div class="rc-total"><span>TOTAL</span><strong>' + fmt(data.total) + ' DH</strong></div>' +
           '<div class="rc-pay">' + (data.paid ? "Payée au comptoir" : "À régler au comptoir") + '</div>' +
+          (data.staff && data.staff.length ? data.staff.map(function (n) {
+            return '<div class="rc-staff">Servi par : ' + esc(n) + '</div>';
+          }).join("") : '') +
           '<div class="rc-sep"></div>' +
           '<div class="rc-foot">Merci de votre visite</div>' +
         '</div>';
@@ -7237,6 +7368,7 @@ function wireCounterDrawer(){
         sep();
         L(rightLine("TOTAL", fmt(data.total) + " DH", 11), 11, true, "left", 2);
         L(data.paid ? "Payée au comptoir" : "À régler au comptoir", 8.5, false, "center", 2);
+        (data.staff || []).forEach(function (n) { L("Servi par : " + n, 8.5, false, "center", 0); });
         sep();
         L("Merci de votre visite", 9, false, "center", 2);
         var totalH = 12;
@@ -7336,6 +7468,267 @@ function wireCounterDrawer(){
       document.getElementById("ticketClose").addEventListener("click", hideTicketModal);
       var _ticketModalEl = document.getElementById("ticketModal");
       if (_ticketModalEl) _ticketModalEl.addEventListener("click", function (e) { if (e.target === this) hideTicketModal(); });
+    </script>
+    <script>
+      /* ---------------- Profils du personnel (2026-11-19) ----------------
+         Connexion par code seul : code maître → Propriétaire (accès
+         complet) ; code d'un profil → session du membre (commandes
+         uniquement). Profils dans blueberry-staff, codes hachés
+         SHA-256, uniques. Les actions du personnel signent la
+         commande (handledBy / servedBy / paidBy) ; celles du
+         propriétaire ne signent rien. */
+      var SESSION_KEY = "blueberry_counter_session_v1";
+      var STAFF_CACHE_KEY = "blueberry_staff_cache_v1";
+      var gateProfiles = null;
+      var staffEditingId = null;
+      var staffDeleteConfirm = {};
+
+      function sha256hex(ascii) {
+        function rr(v, a) { return (v >>> a) | (v << (32 - a)); }
+        var mathPow = Math.pow, maxWord = mathPow(2, 32);
+        var result = "";
+        var words = [], asciiBitLength = ascii.length * 8;
+        var hash = sha256hex.h = sha256hex.h || [];
+        var k = sha256hex.k = sha256hex.k || [];
+        var primeCounter = k.length;
+        var isComposite = {};
+        for (var candidate = 2; primeCounter < 64; candidate++) {
+          if (!isComposite[candidate]) {
+            for (var i = 0; i < 313; i += candidate) isComposite[i] = candidate;
+            hash[primeCounter] = (mathPow(candidate, .5) * maxWord) | 0;
+            k[primeCounter++] = (mathPow(candidate, 1 / 3) * maxWord) | 0;
+          }
+        }
+        ascii += "\x80";
+        while (ascii.length % 64 - 56) ascii += "\x00";
+        for (var i = 0; i < ascii.length; i++) {
+          var j = ascii.charCodeAt(i);
+          if (j >> 8) return "";
+          words[i >> 2] |= j << ((3 - i) % 4) * 8;
+        }
+        words[words.length] = ((asciiBitLength / maxWord) | 0);
+        words[words.length] = asciiBitLength;
+        for (var j = 0; j < words.length;) {
+          var w = words.slice(j, j += 16), oldHash = hash;
+          hash = hash.slice(0, 8);
+          for (var i = 0; i < 64; i++) {
+            var w15 = w[i - 15], w2 = w[i - 2];
+            var a = hash[0], e = hash[4];
+            var temp1 = hash[7]
+              + (rr(e, 6) ^ rr(e, 11) ^ rr(e, 25))
+              + ((e & hash[5]) ^ ((~e) & hash[6]))
+              + k[i]
+              + (w[i] = (i < 16) ? w[i] : (
+                  w[i - 16]
+                  + (rr(w15, 7) ^ rr(w15, 18) ^ (w15 >>> 3))
+                  + w[i - 7]
+                  + (rr(w2, 17) ^ rr(w2, 19) ^ (w2 >>> 10))
+                ) | 0);
+            var temp2 = (rr(a, 2) ^ rr(a, 13) ^ rr(a, 22))
+              + ((a & hash[1]) ^ (a & hash[2]) ^ (hash[1] & hash[2]));
+            hash = [(temp1 + temp2) | 0].concat(hash);
+            hash[4] = (hash[4] + temp1) | 0;
+          }
+          for (var i = 0; i < 8; i++) hash[i] = (hash[i] + oldHash[i]) | 0;
+        }
+        for (var i = 0; i < 8; i++) {
+          for (var j = 3; j + 1; j--) {
+            var b = (hash[i] >> (j * 8)) & 255;
+            result += ((b < 16) ? 0 : "") + b.toString(16);
+          }
+        }
+        return result;
+      }
+
+      function getSession() {
+        try {
+          var s = JSON.parse(localStorage.getItem(SESSION_KEY) || "null");
+          return (s && s.role) ? s : null;
+        } catch (e) { return null; }
+      }
+      function setSession(sess) {
+        try { localStorage.setItem(SESSION_KEY, JSON.stringify(sess)); } catch (e) { /* ignore */ }
+      }
+      function currentStaff() {
+        var s = getSession();
+        return (s && s.role === "staff" && s.name) ? s : null;
+      }
+      function stampName() {
+        var st = currentStaff();
+        return st ? st.name : null;
+      }
+      function cacheStaffProfiles(map) {
+        try { localStorage.setItem(STAFF_CACHE_KEY, JSON.stringify(map || {})); } catch (e) { /* ignore */ }
+      }
+      function cachedStaffProfiles() {
+        try { return JSON.parse(localStorage.getItem(STAFF_CACHE_KEY) || "{}") || {}; } catch (e) { return {}; }
+      }
+      function loadGateProfiles() {
+        gateProfiles = cachedStaffProfiles();
+        if (typeof firebase === "undefined" || !CONFIGURED) return;
+        try {
+          if (!firebase.apps || !firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+          var read = function () {
+            firebase.database().ref("blueberry-staff").once("value").then(function (snap) {
+              gateProfiles = snap.val() || {};
+              cacheStaffProfiles(gateProfiles);
+            }).catch(function () { /* le cache local reste valable */ });
+          };
+          if (typeof firebase.auth === "function") {
+            firebase.auth().signInAnonymously().then(read).catch(function () { /* cache local */ });
+          } else { read(); }
+        } catch (e) { /* cache local */ }
+      }
+      function findStaffByPin(pin) {
+        var map = gateProfiles || cachedStaffProfiles();
+        var h = sha256hex(String(pin || ""));
+        var ids = Object.keys(map || {});
+        for (var i = 0; i < ids.length; i++) {
+          if (map[ids[i]] && map[ids[i]].pinHash === h) return { id: ids[i], name: map[ids[i]].name || "" };
+        }
+        return null;
+      }
+      function applySessionUI() {
+        var st = currentStaff();
+        document.body.classList.toggle("staff-session", !!st);
+        var chip = document.getElementById("staffChip");
+        if (chip) {
+          if (st) { chip.textContent = "👤 " + st.name; chip.hidden = false; }
+          else { chip.hidden = true; chip.textContent = ""; }
+        }
+        if (st) showCounterView("orders");
+        renderStaffProfiles();
+      }
+      function renderStaffProfiles() {
+        var list = document.getElementById("staffList");
+        if (!list) return;
+        var ids = Object.keys(staffProfiles || {});
+        if (!ids.length) {
+          list.innerHTML = '<div class="top-empty">Aucun profil pour le moment.</div>';
+          return;
+        }
+        list.innerHTML = ids.map(function (id) {
+          var p = staffProfiles[id] || {};
+          var meta = [p.matricule ? "Matricule : " + p.matricule : "", p.phone ? "Tél. " + p.phone : ""]
+            .filter(Boolean).join(" · ");
+          var confirming = staffDeleteConfirm[id] && (Date.now() - staffDeleteConfirm[id] < 4000);
+          return '<div class="staff-row">' +
+            '<span class="staff-main"><strong>👤 ' + esc(p.name || "") + '</strong>' +
+            (meta ? '<small>' + esc(meta) + '</small>' : '') + '</span>' +
+            '<button class="bb-btn ghost" type="button" data-staff-edit="' + esc(id) + '">✎ Modifier</button>' +
+            '<button class="delete-btn' + (confirming ? ' confirm' : '') + '" type="button" data-staff-delete="' + esc(id) + '">' +
+            (confirming ? 'Supprimer ce profil ?' : '🗑 Supprimer') + '</button>' +
+            '</div>';
+        }).join("");
+      }
+      function staffFormError(msg) {
+        var el = document.getElementById("staffError");
+        if (el) { el.textContent = msg || ""; el.hidden = !msg; }
+      }
+      function resetStaffForm() {
+        staffEditingId = null;
+        ["staffName", "staffPin", "staffMatricule", "staffPhone"].forEach(function (id) {
+          var el = document.getElementById(id); if (el) el.value = "";
+        });
+        var title = document.getElementById("staffFormTitle");
+        if (title) title.textContent = "Nouveau profil";
+        var cancel = document.getElementById("staffCancelEdit");
+        if (cancel) cancel.hidden = true;
+        staffFormError("");
+      }
+      function afterStaffWrite() {
+        var finish = function () {
+          cacheStaffProfiles(staffProfiles);
+          gateProfiles = staffProfiles;
+          resetStaffForm();
+          renderStaffProfiles();
+        };
+        if (!previewMode && staffRef) {
+          staffRef.once("value").then(function (snap) {
+            staffProfiles = snap.val() || {};
+            finish();
+          }).catch(finish);
+        } else { finish(); }
+      }
+      function saveStaffProfile() {
+        var name = (document.getElementById("staffName").value || "").trim();
+        var pin = (document.getElementById("staffPin").value || "").trim();
+        var matricule = (document.getElementById("staffMatricule").value || "").trim();
+        var phone = (document.getElementById("staffPhone").value || "").trim();
+        if (!name) { staffFormError("Le nom est obligatoire."); return; }
+        var pinHash = null;
+        if (pin) {
+          if (!/^\d{4}$/.test(pin)) { staffFormError("Le code doit contenir 4 chiffres."); return; }
+          pinHash = sha256hex(pin);
+          if (pinHash === sha256hex(PIN_CODE)) { staffFormError("Ce code est déjà utilisé (code du propriétaire)."); return; }
+          var dup = Object.keys(staffProfiles || {}).some(function (id) {
+            return id !== staffEditingId && staffProfiles[id] && staffProfiles[id].pinHash === pinHash;
+          });
+          if (dup) { staffFormError("Ce code est déjà utilisé par un autre profil."); return; }
+        } else if (!staffEditingId) {
+          staffFormError("Le code (PIN) est obligatoire."); return;
+        }
+        var data = { name: name, matricule: matricule, phone: phone };
+        if (pinHash) data.pinHash = pinHash;
+        if (staffEditingId) {
+          if (previewMode || !staffRef) { Object.assign(staffProfiles[staffEditingId], data); afterStaffWrite(); }
+          else staffRef.child(staffEditingId).update(data).then(afterStaffWrite).catch(function () { staffFormError("Échec de l'enregistrement."); });
+        } else {
+          data.createdAt = (typeof firebase !== "undefined" && firebase.database && firebase.database.ServerValue)
+            ? firebase.database.ServerValue.TIMESTAMP : Date.now();
+          if (previewMode || !staffRef) {
+            staffProfiles["local-" + Date.now()] = data; afterStaffWrite();
+          } else {
+            staffRef.push(data).then(afterStaffWrite).catch(function () { staffFormError("Échec de l'enregistrement."); });
+          }
+        }
+      }
+      document.addEventListener("click", function (e) {
+        var ed = e.target.closest("[data-staff-edit]");
+        if (ed) {
+          var id = ed.getAttribute("data-staff-edit");
+          var p = staffProfiles[id] || {};
+          staffEditingId = id;
+          document.getElementById("staffName").value = p.name || "";
+          document.getElementById("staffPin").value = "";
+          document.getElementById("staffMatricule").value = p.matricule || "";
+          document.getElementById("staffPhone").value = p.phone || "";
+          var title = document.getElementById("staffFormTitle");
+          if (title) title.textContent = "Modifier le profil";
+          var cancel = document.getElementById("staffCancelEdit");
+          if (cancel) cancel.hidden = false;
+          staffFormError("");
+          return;
+        }
+        var del = e.target.closest("[data-staff-delete]");
+        if (del) {
+          var delId = del.getAttribute("data-staff-delete");
+          if (staffDeleteConfirm[delId] && Date.now() - staffDeleteConfirm[delId] < 4000) {
+            delete staffDeleteConfirm[delId];
+            if (previewMode || !staffRef) { delete staffProfiles[delId]; afterStaffWrite(); }
+            else staffRef.child(delId).remove().then(afterStaffWrite).catch(function () {});
+          } else {
+            staffDeleteConfirm[delId] = Date.now();
+            renderStaffProfiles();
+            setTimeout(function () { if (staffDeleteConfirm[delId]) { delete staffDeleteConfirm[delId]; renderStaffProfiles(); } }, 4100);
+          }
+          return;
+        }
+      });
+      var _staffSaveBtn = document.getElementById("staffSaveBtn");
+      if (_staffSaveBtn) _staffSaveBtn.addEventListener("click", saveStaffProfile);
+      var _staffCancelBtn = document.getElementById("staffCancelEdit");
+      if (_staffCancelBtn) _staffCancelBtn.addEventListener("click", resetStaffForm);
+      var _staffToggle = document.getElementById("staffToggle");
+      if (_staffToggle) _staffToggle.addEventListener("click", function () {
+        document.getElementById("staffSection").classList.toggle("open");
+      });
+      if (previewMode) staffProfiles = cachedStaffProfiles();
+      /* Filet de sécurité : le portail peut s'ouvrir (micro-tâche)
+         avant l'exécution de ce script — appliquer quand même la
+         session, ou charger les profils pour la connexion. */
+      if (!document.getElementById("appWrap").hidden) applySessionUI();
+      else if (!document.getElementById("pinGate").hidden) loadGateProfiles();
     </script>
   </body>
 </html>
