@@ -874,6 +874,46 @@
       .manage-cat-name { display: flex; align-items: center; flex-wrap: nowrap; }
       .manage-cat-name .manage-drag-grip { flex-shrink: 0; }
 
+      /* ---------- Ticket (2026-11-19) ---------- */
+      .ticket-btn {
+        border: 1px solid var(--yellow); background: var(--yellow-soft); color: var(--black);
+        border-radius: 10px; min-height: 40px; padding: 7px 13px;
+        font-size: 13.5px; font-weight: 900; white-space: nowrap;
+      }
+      .ticket-btn:active { transform: scale(0.98); }
+      .bill-card .ticket-btn { min-height: 42px; padding: 8px 14px; font-size: 14px; }
+      .ticket-modal-box { max-width: 380px; }
+      .ticket-actions { flex-wrap: wrap; }
+      .ticket-actions .bb-btn { flex: 1 1 auto; }
+      #ticketPreview { display: flex; justify-content: center; }
+      .receipt {
+        width: 80mm; max-width: 100%; background: #FFFFFF; color: #1A1A1A;
+        font-family: "Courier New", Courier, monospace; font-size: 12.5px; line-height: 1.45;
+        padding: 12px 10px; border: 1px solid var(--line); border-radius: 4px;
+        box-shadow: 0 6px 20px rgba(34,48,63,.12);
+        -webkit-print-color-adjust: exact; print-color-adjust: exact;
+      }
+      .rc-head { text-align: center; }
+      .rc-name { font-size: 21px; font-weight: 900; letter-spacing: .04em; color: var(--black); }
+      .rc-since { font-size: 10px; font-weight: 800; letter-spacing: .3em; color: var(--muted); margin-top: 2px; }
+      .rc-addr, .rc-phone { font-size: 11px; margin-top: 3px; }
+      .rc-sep { border-top: 2px dashed var(--yellow); margin: 9px 0; }
+      .rc-meta div { display: flex; justify-content: space-between; gap: 10px; }
+      .rc-meta span { color: var(--muted); }
+      .rc-item { margin: 5px 0; }
+      .rc-iname { font-weight: 700; overflow-wrap: break-word; }
+      .rc-irow { display: flex; justify-content: space-between; gap: 10px; }
+      .rc-total { display: flex; justify-content: space-between; font-size: 16px; font-weight: 900; }
+      .rc-pay { text-align: center; font-weight: 800; margin-top: 4px; }
+      .rc-foot { text-align: center; font-weight: 700; }
+      #ticketPrint { display: none; }
+      @page { size: 80mm auto; margin: 0; }
+      @media print {
+        body > *:not(#ticketPrint) { display: none !important; }
+        #ticketPrint { display: block !important; }
+        #ticketPrint .receipt { border: none; box-shadow: none; width: 80mm; }
+      }
+
 </style>
   </head>
   <body>
@@ -1095,6 +1135,19 @@
     </div>
     <div class="bb-toast" id="manageToast" role="status" aria-live="polite"></div>
 
+    <!-- Ticket (2026-11-19) -->
+    <div class="bb-modal-overlay" id="ticketModal" role="dialog" aria-modal="true" aria-labelledby="ticketModalTitle">
+      <div class="bb-modal ticket-modal-box">
+        <h3 id="ticketModalTitle">Ticket</h3>
+        <div id="ticketPreview"></div>
+        <div class="bb-modal-actions ticket-actions">
+          <button type="button" class="bb-btn ghost" id="ticketClose">Fermer</button>
+          <button type="button" class="bb-btn ghost" id="ticketPdfBtn">📄 PDF</button>
+          <button type="button" class="bb-btn primary" id="ticketPrintBtn">🖨 Imprimer</button>
+        </div>
+      </div>
+    </div>
+    <div id="ticketPrint"></div>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
@@ -6362,6 +6415,7 @@ function wireCounterDrawer(){
           var confirmingDel = deleteConfirm[o._id] && (Date.now() - deleteConfirm[o._id] < 4000);
           var note = st === "cancelled" ? 'Commande annulée' : (o.paid ? 'Payée ✓' : 'Servie — en attente de paiement');
           foot = '<span class="served-note">' + note + '</span>' +
+            (st === "served" ? '<button class="ticket-btn" type="button" data-ticket-order="' + esc(o._id) + '">🧾 Ticket</button>' : '') +
             '<button class="delete-btn' + (confirmingDel ? ' confirm' : '') + '" type="button" data-delete="' + esc(o._id) + '">' +
             (confirmingDel ? 'Supprimer cette commande ?' : '🗑 Supprimer') + '</button>';
         }
@@ -6421,6 +6475,7 @@ function wireCounterDrawer(){
             (activeCount ? '<span class="live-dot" title="Commande en cours"></span>' : '') + '</div>' +
             '<div class="bill-detail">' + (detail.length ? esc(detail.join(" · ")) : "Rien à payer") + '</div></div>' +
             '<div class="bill-amount' + (owed > 0 ? '' : ' zero') + '">' + fmt(owed) + ' DH</div>' +
+            (servedCount > 0 ? '<button type="button" class="ticket-btn" data-ticket-table="' + t + '">🧾 Ticket</button>' : '') +
             '<button type="button" class="pay-btn' + (confirming ? ' confirm' : '') + '" data-pay="' + t + '"' +
             (owed > 0 ? '' : ' disabled') + '>' + (confirming ? "Confirmer ?" : "Payé") + '</button></div>';
         });
@@ -7017,6 +7072,270 @@ function wireCounterDrawer(){
         }
       }
       });
+    </script>
+    <script>
+      /* ---------------- Ticket (2026-11-19) ----------------
+         Reçu 80 mm d'une commande servie (bouton « Ticket » sur la
+         carte de commande terminée — reste visible après paiement,
+         donc réimprimable) ou de l'addition d'une table (bouton sur
+         la carte d'addition : commandes servies impayées fusionnées).
+         Deux sorties : PDF (générateur minimal intégré, sans
+         dépendance — marche hors-ligne dans la WebView) et impression
+         directe (pont natif AndroidBridge.printTicket si présent,
+         sinon window.print() avec le CSS d'impression qui n'affiche
+         que le ticket). Le pont natif d'impression / de sauvegarde
+         PDF dans l'APK est un chantier séparé (build APK) : seule la
+         page est prête ici. */
+      var TICKET_SHOP = {
+        name: "BLUE BERRY", since: "DEPUIS 1998",
+        address: "Av. Mehdi Ben Barka, Aswak Assalam, Hay Riad, Rabat",
+        phone: "0661 72 39 54"
+      };
+      var _ticketCurrent = null;
+
+      function ticketPad2(n) { return (n < 10 ? "0" : "") + n; }
+      function ticketDateLabel(ts) {
+        var d = new Date(ts || Date.now());
+        return ticketPad2(d.getDate()) + "/" + ticketPad2(d.getMonth() + 1) + "/" + d.getFullYear() +
+          " " + ticketPad2(d.getHours()) + ":" + ticketPad2(d.getMinutes());
+      }
+      function ticketDataFromOrders(list) {
+        if (!list || !list.length) return null;
+        var merged = [], byKey = {}, total = 0, latest = null, paid = true;
+        list.forEach(function (o) {
+          total += orderTotal(o);
+          if (!o.paid) paid = false;
+          if (!latest || (o.createdAt || 0) > (latest.createdAt || 0)) latest = o;
+          itemsArray(o).forEach(function (i) {
+            var name = String(i.name || ""), price = Number(i.price) || 0, qty = Number(i.qty) || 1;
+            var key = name + "|" + price;
+            if (byKey[key]) { byKey[key].qty += qty; }
+            else { var row = { name: name, price: price, qty: qty }; byKey[key] = row; merged.push(row); }
+          });
+        });
+        merged.forEach(function (r) { r.total = r.price * r.qty; });
+        var mode = (latest && latest.mode === "emporter") ? "emporter" : "surplace";
+        var ts = (latest && latest.createdAt) ? latest.createdAt : Date.now();
+        return {
+          table: (latest && latest.table != null) ? latest.table : "?",
+          mode: mode,
+          modeLabel: mode === "emporter" ? "À emporter" : "Sur place",
+          date: ts, dateLabel: ticketDateLabel(ts),
+          items: merged, total: total, paid: paid, count: list.length
+        };
+      }
+      function ticketDataForOrder(id) {
+        var o = orders[id];
+        return o ? ticketDataFromOrders([o]) : null;
+      }
+      function ticketDataForTable(t) {
+        var list = Object.keys(orders).map(function (id) { return orders[id]; })
+          .filter(function (o) { return Number(o.table) === t && o.status === "served" && !o.paid; })
+          .sort(function (a, b) { return (a.createdAt || 0) - (b.createdAt || 0); });
+        return ticketDataFromOrders(list);
+      }
+      function receiptHTML(data) {
+        var rows = data.items.map(function (r) {
+          return '<div class="rc-item"><div class="rc-iname">' + esc(r.name) + '</div>' +
+            '<div class="rc-irow"><span>' + r.qty + ' × ' + fmt(r.price) + ' DH</span>' +
+            '<strong>' + fmt(r.total) + ' DH</strong></div></div>';
+        }).join("");
+        return '<div class="receipt">' +
+          '<div class="rc-head">' +
+            '<div class="rc-name">' + esc(TICKET_SHOP.name) + '</div>' +
+            '<div class="rc-since">' + esc(TICKET_SHOP.since) + '</div>' +
+            '<div class="rc-addr">' + esc(TICKET_SHOP.address) + '</div>' +
+            '<div class="rc-phone">Tél. ' + esc(TICKET_SHOP.phone) + '</div>' +
+          '</div>' +
+          '<div class="rc-sep"></div>' +
+          '<div class="rc-meta">' +
+            '<div><span>Date</span><strong>' + esc(data.dateLabel) + '</strong></div>' +
+            '<div><span>Table</span><strong>' + esc(data.table) + '</strong></div>' +
+            '<div><span>Mode</span><strong>' + esc(data.modeLabel) + '</strong></div>' +
+          '</div>' +
+          '<div class="rc-sep"></div>' + rows +
+          '<div class="rc-sep"></div>' +
+          '<div class="rc-total"><span>TOTAL</span><strong>' + fmt(data.total) + ' DH</strong></div>' +
+          '<div class="rc-pay">' + (data.paid ? "Payée au comptoir" : "À régler au comptoir") + '</div>' +
+          '<div class="rc-sep"></div>' +
+          '<div class="rc-foot">Merci de votre visite</div>' +
+        '</div>';
+      }
+      function openTicket(data) {
+        if (!data) return;
+        _ticketCurrent = data;
+        var html = receiptHTML(data);
+        document.getElementById("ticketPreview").innerHTML = html;
+        document.getElementById("ticketPrint").innerHTML = html;
+        if (typeof showModal === "function") showModal("ticketModal");
+        else document.getElementById("ticketModal").classList.add("show");
+      }
+      function hideTicketModal() {
+        var m = document.getElementById("ticketModal");
+        if (m) m.classList.remove("show");
+        _ticketCurrent = null;
+        if (typeof isCounterModalOpen === "function" && !isCounterModalOpen() &&
+            typeof setCounterStatsVisible === "function") setCounterStatsVisible(true);
+      }
+
+      /* --- PDF minimal : page 80 mm, Courier, WinAnsi, sans compression.
+             Aucune dépendance : le ticket est du texte, un générateur
+             d'une page suffit et marche hors-ligne dans la WebView. --- */
+      function pdfWinAnsi(str) {
+        var map = { "\u20AC": 0x80, "\u2026": 0x85, "\u2018": 0x91, "\u2019": 0x92,
+                    "\u201C": 0x93, "\u201D": 0x94, "\u2022": 0x95, "\u2013": 0x96,
+                    "\u2014": 0x97, "\u2122": 0x99, "\u0152": 0x8C, "\u0153": 0x9C, "\u0178": 0x9F };
+        var out = "";
+        for (var i = 0; i < str.length; i++) {
+          var ch = str.charAt(i), code = str.charCodeAt(i);
+          if (map[ch] != null) out += String.fromCharCode(map[ch]);
+          else if (code >= 32 && code <= 126) out += ch;
+          else if (code >= 160 && code <= 255) out += ch;
+          else if (code === 10) out += "\n";
+          else out += "?";
+        }
+        return out;
+      }
+      function pdfEsc(str) {
+        return pdfWinAnsi(str).replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)");
+      }
+      function ticketPdfBytes(data) {
+        var PW = 226.77, M = 10, TW = PW - 2 * M;
+        var lines = [];
+        function L(t, size, bold, align, gap) { lines.push({ t: t, size: size, bold: !!bold, align: align || "left", gap: gap || 0 }); }
+        function sep() { L(new Array(41).join("-"), 8, false, "center", 3); }
+        function wrap(text, max) {
+          var words = String(text || "").split(/\s+/), out = [], cur = "";
+          words.forEach(function (w) {
+            if (!w) return;
+            if (cur && (cur + " " + w).length > max) { out.push(cur); cur = w; }
+            else cur = cur ? cur + " " + w : w;
+            while (cur.length > max) { out.push(cur.slice(0, max)); cur = cur.slice(max); }
+          });
+          if (cur) out.push(cur);
+          return out.length ? out : [""];
+        }
+        function rightLine(left, right, size) {
+          var max = Math.floor(TW / (0.6 * size));
+          var pad = max - left.length - right.length;
+          if (pad < 1) pad = 1;
+          return left + new Array(pad + 1).join(" ") + right;
+        }
+        L(TICKET_SHOP.name, 16, true, "center", 0);
+        L(TICKET_SHOP.since, 8, false, "center", 2);
+        wrap(TICKET_SHOP.address, 40).forEach(function (l) { L(l, 8, false, "center", 0); });
+        L("Tél. " + TICKET_SHOP.phone, 8, false, "center", 2);
+        sep();
+        L("Date : " + data.dateLabel, 8.5, false, "left", 2);
+        L("Table : " + data.table, 8.5, true, "left", 0);
+        L("Mode : " + data.modeLabel, 8.5, false, "left", 0);
+        sep();
+        data.items.forEach(function (r) {
+          wrap(r.name, 40).forEach(function (l) { L(l, 8.5, false, "left", 0); });
+          L(rightLine("  " + r.qty + " x " + fmt(r.price) + " DH", fmt(r.total) + " DH", 8.5), 8.5, false, "left", 1);
+        });
+        sep();
+        L(rightLine("TOTAL", fmt(data.total) + " DH", 11), 11, true, "left", 2);
+        L(data.paid ? "Payée au comptoir" : "À régler au comptoir", 8.5, false, "center", 2);
+        sep();
+        L("Merci de votre visite", 9, false, "center", 2);
+        var totalH = 12;
+        lines.forEach(function (l) { totalH += l.gap + l.size * 1.35; });
+        totalH += 12;
+        var y = totalH - 12, content = "";
+        lines.forEach(function (l) {
+          y -= l.gap;
+          var w = l.t.length * 0.6 * l.size;
+          var x = l.align === "center" ? (PW - w) / 2 : (l.align === "right" ? PW - M - w : M);
+          y -= l.size;
+          content += "BT /" + (l.bold ? "F2" : "F1") + " " + l.size + " Tf 1 0 0 1 " +
+            x.toFixed(2) + " " + y.toFixed(2) + " Tm (" + pdfEsc(l.t) + ") Tj ET\n";
+          y -= l.size * 0.35;
+        });
+        var objs = [];
+        objs[1] = "<< /Type /Catalog /Pages 2 0 R >>";
+        objs[2] = "<< /Type /Pages /Kids [3 0 R] /Count 1 >>";
+        objs[3] = "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 " + PW.toFixed(2) + " " + totalH.toFixed(2) +
+          "] /Resources << /Font << /F1 4 0 R /F2 5 0 R >> >> /Contents 6 0 R >>";
+        objs[4] = "<< /Type /Font /Subtype /Type1 /BaseFont /Courier /Encoding /WinAnsiEncoding >>";
+        objs[5] = "<< /Type /Font /Subtype /Type1 /BaseFont /Courier-Bold /Encoding /WinAnsiEncoding >>";
+        objs[6] = "<< /Length " + content.length + " >>\nstream\n" + content + "endstream";
+        var pdf = "%PDF-1.4\n%\xe2\xe3\xcf\xd3\n", offsets = [];
+        for (var i = 1; i <= 6; i++) {
+          offsets[i] = pdf.length;
+          pdf += i + " 0 obj\n" + objs[i] + "\nendobj\n";
+        }
+        var xrefPos = pdf.length;
+        pdf += "xref\n0 7\n0000000000 65535 f \n";
+        for (var j = 1; j <= 6; j++) {
+          var off = String(offsets[j]);
+          while (off.length < 10) off = "0" + off;
+          pdf += off + " 00000 n \n";
+        }
+        pdf += "trailer\n<< /Size 7 /Root 1 0 R >>\nstartxref\n" + xrefPos + "\n%%EOF";
+        return pdf;
+      }
+      function ticketPdfBlob(data) {
+        var bytes = ticketPdfBytes(data);
+        var arr = new Uint8Array(bytes.length);
+        for (var i = 0; i < bytes.length; i++) arr[i] = bytes.charCodeAt(i) & 0xff;
+        return new Blob([arr], { type: "application/pdf" });
+      }
+      function ticketFileName(data) {
+        var d = new Date(data.date || Date.now());
+        return "ticket-table-" + data.table + "-" + d.getFullYear() + ticketPad2(d.getMonth() + 1) +
+          ticketPad2(d.getDate()) + "-" + ticketPad2(d.getHours()) + ticketPad2(d.getMinutes()) + ".pdf";
+      }
+      function downloadTicketPdf() {
+        var data = _ticketCurrent;
+        if (!data) return;
+        var blob = ticketPdfBlob(data);
+        var name = ticketFileName(data);
+        /* APK : un téléchargement blob échoue en silence dans une
+           WebView sans DownloadListener — le pont natif (s'il existe)
+           reçoit le PDF en base64 et le sauvegarde/partage. */
+        if (window.AndroidBridge && typeof AndroidBridge.savePdf === "function") {
+          var reader = new FileReader();
+          reader.onload = function () {
+            var b64 = String(reader.result).split(",")[1] || "";
+            AndroidBridge.savePdf(b64, name);
+          };
+          reader.readAsDataURL(blob);
+          return;
+        }
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement("a");
+        a.href = url; a.download = name;
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
+      }
+      function printTicket() {
+        var data = _ticketCurrent;
+        if (!data) return;
+        var html = receiptHTML(data);
+        /* APK : window.print() exige un adaptateur d'impression natif
+           (chantier APK séparé) — le pont natif, s'il existe, reçoit
+           le HTML du ticket et l'imprime directement. */
+        if (window.AndroidBridge && typeof AndroidBridge.printTicket === "function") {
+          AndroidBridge.printTicket(html);
+          return;
+        }
+        document.getElementById("ticketPrint").innerHTML = html;
+        window.print();
+      }
+
+      /* --- Branchement des boutons Ticket --- */
+      document.addEventListener("click", function (e) {
+        var to = e.target.closest("[data-ticket-order]");
+        if (to) { openTicket(ticketDataForOrder(to.getAttribute("data-ticket-order"))); return; }
+        var tt = e.target.closest("[data-ticket-table]");
+        if (tt) { openTicket(ticketDataForTable(Number(tt.getAttribute("data-ticket-table")))); return; }
+      });
+      document.getElementById("ticketPdfBtn").addEventListener("click", downloadTicketPdf);
+      document.getElementById("ticketPrintBtn").addEventListener("click", printTicket);
+      document.getElementById("ticketClose").addEventListener("click", hideTicketModal);
+      var _ticketModalEl = document.getElementById("ticketModal");
+      if (_ticketModalEl) _ticketModalEl.addEventListener("click", function (e) { if (e.target === this) hideTicketModal(); });
     </script>
   </body>
 </html>
