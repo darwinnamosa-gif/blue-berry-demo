@@ -96,6 +96,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
 <style>
   :root{
     --yellow:#F2B705; --yellow-2:#F8BD56; --yellow-soft:#FFF6DB;
@@ -538,6 +539,46 @@
   .bb-since{ font-size:.30em; font-weight:800; letter-spacing:.34em; color:#2E4A6B; text-align:right; margin-top:.45em; white-space:nowrap; }
   .bb-cluster{ height:1.5em; width:auto; flex-shrink:0; }
 
+
+  /* ---------- Suivi de commande + notification « prête » (2026-11-19) ---------- */
+  .order-status{
+    max-width:420px; margin:0 auto 18px; background:var(--paper);
+    border:1px solid var(--line); border-radius:14px; padding:14px 12px 10px;
+  }
+  .os-steps{ display:flex; align-items:flex-start; }
+  .os-step{ display:flex; flex-direction:column; align-items:center; gap:5px; width:76px; flex-shrink:0; }
+  .os-dot{
+    width:26px; height:26px; border-radius:50%; border:2.5px solid var(--line-dark);
+    background:#fff; display:flex; align-items:center; justify-content:center;
+    font-size:14px; font-weight:900; color:#fff;
+  }
+  .os-step.done .os-dot{ background:var(--green); border-color:var(--green); }
+  .os-step.done .os-dot::after{ content:"✓"; }
+  .os-step.current .os-dot{ background:var(--yellow); border-color:var(--yellow); animation:os-pulse 1.2s ease-in-out infinite; }
+  .os-lbl{ font-size:12.5px; font-weight:800; color:var(--muted); text-align:center; line-height:1.25; }
+  .os-step.done .os-lbl{ color:var(--green); }
+  .os-step.current .os-lbl{ color:var(--black); }
+  .os-line{ flex:1; height:2.5px; background:var(--line); margin-top:12px; border-radius:2px; }
+  .os-msg{ margin:10px 0 2px; font-size:15.5px; font-weight:800; color:var(--black); }
+  .order-status.os-cancelled .os-msg{ color:var(--red-ink); }
+  @keyframes os-pulse{ 0%,100%{ transform:scale(1); } 50%{ transform:scale(1.18); } }
+  .ready-banner{
+    position:fixed; top:0; left:0; right:0; z-index:95;
+    background:var(--green); color:#fff;
+    display:none; align-items:center; gap:10px;
+    padding:14px 16px; padding-top:calc(14px + env(safe-area-inset-top));
+    box-shadow:0 8px 24px rgba(21,128,61,.45);
+  }
+  .ready-banner.show{ display:flex; animation:rb-slide .3s ease-out; }
+  @keyframes rb-slide{ from{ transform:translateY(-100%); } to{ transform:translateY(0); } }
+  .rb-text{ flex:1; display:flex; flex-direction:column; gap:1px; }
+  .rb-text b{ font-size:19px; font-weight:900; line-height:1.2; }
+  .rb-text span{ font-size:15px; font-weight:700; opacity:.92; }
+  .rb-close{
+    border:none; cursor:pointer; background:rgba(255,255,255,.18); color:#fff;
+    width:40px; height:40px; border-radius:50%; font-size:22px; font-weight:900; line-height:1;
+    flex-shrink:0;
+  }
 </style>
 </head>
 <body>
@@ -602,6 +643,16 @@
       <p><span class="s-mode" id="successMode">Sur place</span></p>
       <p class="s-total">Total : <b id="successTotal">0 DH</b></p>
       <p class="s-note" id="successNote"></p>
+      <div class="order-status" id="orderStatus">
+        <div class="os-steps">
+          <div class="os-step" data-step="new"><span class="os-dot"></span><span class="os-lbl">Envoyée</span></div>
+          <div class="os-line"></div>
+          <div class="os-step" data-step="preparing"><span class="os-dot"></span><span class="os-lbl">En préparation</span></div>
+          <div class="os-line"></div>
+          <div class="os-step" data-step="ready"><span class="os-dot"></span><span class="os-lbl">Prête</span></div>
+        </div>
+        <p class="os-msg" id="orderStatusMsg">Commande envoyée au comptoir…</p>
+      </div>
       <div class="pay-note">
         Paiement au comptoir quand vous aurez terminé.
         <span class="fr">Merci de votre visite — Blue Berry.</span>
@@ -636,6 +687,10 @@
 </div>
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div class="ready-banner" id="readyBanner" role="alert" aria-live="assertive">
+  <div class="rb-text"><b>Votre commande est prête !</b><span id="readyBannerTable">Table 1</span></div>
+  <button class="rb-close" id="readyBannerClose" type="button" aria-label="Fermer">×</button>
+</div>
 
 <!-- Confirmation sheet -->
 <div class="overlay" id="confirmOverlay" role="dialog" aria-modal="true" aria-label="Confirmation de la commande">
@@ -4286,7 +4341,7 @@ function initAuth(){
     if (typeof firebase === 'undefined' || typeof firebase.auth !== 'function') { setAuthState('failed'); return; }
     getDb(); /* initializeApp first — auth needs the app */
     firebase.auth().onAuthStateChanged(function(user){
-      if (user) { setAuthState('ok'); startAvailabilityListener(); }
+      if (user) { setAuthState('ok'); startAvailabilityListener(); startMyOrdersWatch(); }
     });
     firebase.auth().signInAnonymously().catch(function(){ setAuthState('failed'); });
   } catch(e) { setAuthState('failed'); }
@@ -4294,6 +4349,8 @@ function initAuth(){
 
 function confirmOrder(){
   if (sending) return;
+  unlockReadyAudio(); /* geste utilisateur : déverrouille l'audio pour l'alerte « prête » */
+  requestNotifyPermission(); /* moment naturel : juste après le tap de confirmation */
   errorBox.classList.remove('show');
 
   if (!firebaseConfigured()) {
@@ -4359,6 +4416,7 @@ function sendOrder(items, total, table, mode, note){
       menuView.classList.add('hidden');
       cartBar.classList.remove('show');
       successView.classList.add('show');
+      trackPlacedOrder(pushRef.key, table); /* suivi en direct de cette commande */
       window.scrollTo(0, 0);
       startKioskCountdown();
     }).catch(function(){
@@ -4373,6 +4431,251 @@ function sendOrder(items, total, table, mode, note){
     confirmBtn.textContent = 'Confirmer la commande';
     errorBox.classList.add('show');
   }
+}
+
+/* ---------------- Suivi de commande + notification « prête » (2026-11-19) ----------------
+   Le client qui a commandé (page ouverte sur son téléphone) suit sa
+   commande en direct : Envoyée → En préparation → Prête. Quand le
+   comptoir passe la commande à « ready » (bouton Prête, nœud
+   blueberry-orders/<id>/status), le client est prévenu :
+   - page visible : bannière verte + son (3 bips) + vibration ;
+   - page en arrière-plan : notification système (API Notification,
+     permission demandée au moment de commander, jamais au chargement) ;
+     la bannière attend le retour au premier plan, sans second son.
+   Une seule alerte par commande (transition vers ready). Les commandes
+   de l'appareil sont mémorisées (localStorage) : si le client rouvre la
+   page et que sa commande est déjà prête, la bannière s'affiche sans
+   son (pas de geste utilisateur, pas d'alerte sonore au chargement).
+   Lecture seule pour le suivi. Phase 2 (plus bas, phase2PushHook) :
+   même page fermée, le client est prévenu par push FCM — la page
+   écrit le jeton FCM de l'appareil sur la commande
+   (blueberry-orders/<id>/pushToken), une Cloud Function envoie le
+   push au passage à « ready », et firebase-messaging-sw.js affiche
+   la notification. */
+var MY_ORDERS_KEY = 'blueberry_my_orders_v1';
+var myOrders = {}; /* id -> {table, status, notifiedReady, seenFirst, ref} */
+var successOrderId = null; /* commande affichée dans l'écran de succès */
+var myOrdersWatchStarted = false;
+var readyAudioCtx = null;
+
+function myOrdersLoad(){
+  try {
+    var raw = localStorage.getItem(MY_ORDERS_KEY);
+    var arr = raw ? JSON.parse(raw) : [];
+    if (!Array.isArray(arr)) return [];
+    var now = Date.now();
+    return arr.filter(function(e){ return e && e.id && (now - (e.ts || 0)) < 4 * 3600 * 1000; }).slice(-5);
+  } catch(e){ return []; }
+}
+function myOrdersSave(arr){
+  try { localStorage.setItem(MY_ORDERS_KEY, JSON.stringify(arr.slice(-5))); } catch(e){}
+}
+function myOrdersRemember(id, table){
+  var arr = myOrdersLoad().filter(function(e){ return e.id !== id; });
+  arr.push({ id: id, table: table, ts: Date.now() });
+  myOrdersSave(arr);
+}
+function myOrdersForget(id){
+  myOrdersSave(myOrdersLoad().filter(function(e){ return e.id !== id; }));
+}
+
+function unlockReadyAudio(){
+  try {
+    if (!readyAudioCtx) {
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) readyAudioCtx = new AC();
+    }
+    if (readyAudioCtx && readyAudioCtx.state === 'suspended') readyAudioCtx.resume();
+  } catch(e){}
+}
+function beepReady(){
+  try {
+    if (!readyAudioCtx) return;
+    if (readyAudioCtx.state === 'suspended') readyAudioCtx.resume();
+    var t0 = readyAudioCtx.currentTime;
+    [0, 0.28, 0.56].forEach(function(off){
+      var o = readyAudioCtx.createOscillator();
+      var g = readyAudioCtx.createGain();
+      o.type = 'sine'; o.frequency.value = 880;
+      g.gain.setValueAtTime(0.0001, t0 + off);
+      g.gain.exponentialRampToValueAtTime(0.25, t0 + off + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + off + 0.22);
+      o.connect(g); g.connect(readyAudioCtx.destination);
+      o.start(t0 + off); o.stop(t0 + off + 0.25);
+    });
+  } catch(e){}
+}
+function vibrateReady(){
+  try { if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 300]); } catch(e){}
+}
+function requestNotifyPermission(){
+  try {
+    if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+      var p = Notification.requestPermission();
+      if (p && typeof p.catch === 'function') p.catch(function(){});
+    }
+  } catch(e){}
+}
+function browserNotifyReady(table, id){
+  try {
+    if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+      new Notification('Blue Berry — Commande prête !', {
+        body: 'Votre commande (Table ' + table + ') est prête.',
+        tag: 'bb-ready-' + id
+      });
+    }
+  } catch(e){}
+}
+
+function showReadyBanner(table){
+  var t = document.getElementById('readyBannerTable');
+  if (t) t.textContent = 'Table ' + table;
+  var b = document.getElementById('readyBanner');
+  if (b) b.classList.add('show');
+}
+function hideReadyBanner(){
+  var b = document.getElementById('readyBanner');
+  if (b) b.classList.remove('show');
+}
+var readyBannerCloseBtn = document.getElementById('readyBannerClose');
+if (readyBannerCloseBtn) readyBannerCloseBtn.addEventListener('click', hideReadyBanner);
+
+function renderOrderStatus(id, st){
+  if (id !== successOrderId) return;
+  var box = document.getElementById('orderStatus');
+  if (!box) return;
+  var order = ['new', 'preparing', 'ready'];
+  var idx = order.indexOf(st);
+  box.classList.toggle('os-cancelled', st === 'cancelled');
+  var steps = box.querySelectorAll('.os-step');
+  [].forEach.call(steps, function(el, i){
+    el.classList.toggle('done', st === 'served' || st === 'ready' || idx > i);
+    el.classList.toggle('current', idx === i && st !== 'ready' && st !== 'served');
+  });
+  var msg = document.getElementById('orderStatusMsg');
+  if (msg) {
+    msg.textContent =
+      st === 'new' ? 'Commande envoyée — le comptoir l’a reçue.' :
+      st === 'preparing' ? 'Votre commande est en préparation…' :
+      st === 'ready' ? 'Votre commande est prête !' :
+      st === 'served' ? 'Commande servie — merci !' :
+      st === 'cancelled' ? 'Commande annulée — adressez-vous au comptoir.' :
+      msg.textContent;
+  }
+}
+
+function onMyOrderStatus(id, st){
+  var o = myOrders[id];
+  if (!o || st == null) return;
+  var first = !o.seenFirst;
+  o.seenFirst = true;
+  o.status = st;
+  if (st === 'ready' && !o.notifiedReady) {
+    o.notifiedReady = true;
+    showReadyBanner(o.table);
+    if (!first) {
+      if (document.hidden) {
+        /* Arrière-plan : le son et la vibration ne passent pas — la
+           notification système est le chemin fiable ; la bannière
+           ci-dessus attend le retour au premier plan. */
+        browserNotifyReady(o.table, id);
+      } else {
+        beepReady();
+        vibrateReady();
+      }
+    }
+    /* Premier instantané déjà « ready » (page rouverte) : bannière
+       seule, pas de son — aucun geste utilisateur n'a encore eu lieu. */
+  }
+  renderOrderStatus(id, st);
+  if (st === 'served' || st === 'cancelled') {
+    unwatchMyOrder(id);
+    myOrdersForget(id);
+  }
+}
+
+function watchMyOrder(id, table){
+  if (!id || myOrders[id]) return;
+  var o = { table: table, status: null, notifiedReady: false, seenFirst: false, ref: null };
+  myOrders[id] = o;
+  try {
+    o.ref = getDb().ref('blueberry-orders/' + id + '/status');
+    o.ref.on('value', function(snap){ onMyOrderStatus(id, snap.val()); }, function(){});
+  } catch(e){}
+}
+function unwatchMyOrder(id){
+  var o = myOrders[id];
+  if (o && o.ref) { try { o.ref.off(); } catch(e){} }
+  delete myOrders[id];
+}
+function trackPlacedOrder(id, table){
+  if (!id) return;
+  successOrderId = id;
+  watchMyOrder(id, table);
+  myOrdersRemember(id, table);
+  phase2PushHook(id);
+  renderOrderStatus(id, 'new');
+}
+function startMyOrdersWatch(){
+  if (myOrdersWatchStarted) return;
+  if (authState !== 'ok' || !firebaseConfigured()) return;
+  myOrdersWatchStarted = true;
+  myOrdersLoad().forEach(function(e){ watchMyOrder(e.id, e.table); phase2PushHook(e.id); /* phase 2 : rafraîchit le jeton push si l'appareil en a un nouveau */ });
+}
+
+/* ---------------- Phase 2 (push FCM) — notification page fermée (2026-11-19) ----------------
+   Même page fermée, le client est prévenu quand sa commande passe à
+   « ready » : phase2PushHook(id) — appelée juste après l'envoi de
+   chaque commande (trackPlacedOrder) et au rechargement pour les
+   commandes mémorisées encore actives (startMyOrdersWatch) —
+   récupère le jeton FCM de l'appareil et l'écrit sur le nœud de la
+   commande (blueberry-orders/<id>/pushToken). Une Cloud Function
+   Firebase (functions/index.js) écoute le passage du statut à
+   « ready » et envoie le push ; le service worker
+   firebase-messaging-sw.js (même dossier que la page, scope
+   /blue-berry-demo/) affiche la notification et rouvre la page au
+   clic.
+   Conditions, toutes silencieuses en cas d'échec (la phase 1
+   continue de fonctionner exactement comme avant) : permission
+   Notification DÉJÀ accordée (demandée une seule fois au moment de
+   commander — voir requestNotifyPermission ; jamais au chargement,
+   jamais re-demandée si refusée), service workers disponibles, SDK
+   messaging chargé. Le jeton stocké est relu avant écriture :
+   réécrit seulement s'il a changé (rafraîchissement au
+   rechargement). Aucun autre écrit Firebase ; sans commande, aucun
+   écrit au chargement. Sur iPhone, le push page fermée exige l'app
+   installée (PWA) ; sur Android Chrome, il fonctionne dans le
+   navigateur. */
+var FCM_VAPID_KEY = 'BAMN8KJV1wXBzhiOEEZDmWad_7JlJr2YK5X0eSNd8j4ipHoI8HxrY7Djn9cHgX0nOVJHtxDkgSkp9Lk5apcfeXw';
+var fcmSwRegPromise = null; /* enregistrement du service worker (une fois par page) */
+var fcmTokenByOrder = {};   /* id -> dernier jeton écrit (évite les réécritures) */
+
+function registerPushToken(id){
+  try {
+    if (!id) return;
+    if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+    if (!('serviceWorker' in navigator)) return;
+    if (typeof firebase === 'undefined' || !firebase.messaging) return;
+    getDb(); /* initialise l'app Firebase si besoin (messaging en dépend) */
+    if (!fcmSwRegPromise) {
+      fcmSwRegPromise = navigator.serviceWorker.register('firebase-messaging-sw.js', { scope: './' });
+    }
+    fcmSwRegPromise.then(function(reg){
+      return firebase.messaging().getToken({ vapidKey: FCM_VAPID_KEY, serviceWorkerRegistration: reg });
+    }).then(function(token){
+      if (!token || fcmTokenByOrder[id] === token) return;
+      var ref = getDb().ref('blueberry-orders/' + id + '/pushToken');
+      return ref.once('value').then(function(snap){
+        if (snap.val() === token) { fcmTokenByOrder[id] = token; return; }
+        return ref.set(token).then(function(){ fcmTokenByOrder[id] = token; });
+      }).catch(function(){
+        return ref.set(token).then(function(){ fcmTokenByOrder[id] = token; });
+      });
+    }).catch(function(){ /* silencieux : la phase 1 reste le chemin de secours */ });
+  } catch(e){}
+}
+function phase2PushHook(id){
+  registerPushToken(id);
 }
 
 /* ---------------- Init ---------------- */
