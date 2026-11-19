@@ -60,6 +60,8 @@ messaging.onBackgroundMessage(function (payload) {
   self.registration.showNotification(title, {
     body: body,
     tag: tag,
+    renotify: true,
+    vibrate: [200, 100, 200, 100, 400],
     data: { url: link }
   });
 });
