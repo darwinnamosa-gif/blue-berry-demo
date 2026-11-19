@@ -579,6 +579,23 @@
     box-shadow:0 2px 8px rgba(0,0,0,.18);
   }
   .os-notif-btn:active{ transform:scale(.97); }
+  /* Carte d'apprentissage (2026-11-19, preview) : avant le prompt du
+     navigateur, la page explique le geste (« Autoriser ») — le client
+     comprend sans aide. Remplace le bouton seul dans l'état
+     « default » ; le bouton garde le même id et le même geste. */
+  .preprompt{
+    margin-top:10px; background:var(--cream);
+    border:1.5px solid var(--yellow); border-radius:12px;
+    padding:12px 12px 14px; text-align:center;
+  }
+  .pp-title{ margin:0 0 4px; font-size:15.5px; font-weight:900; color:var(--black); line-height:1.35; }
+  .pp-txt{ margin:0 0 10px; font-size:13.5px; font-weight:700; color:var(--muted); }
+  .pp-btn{
+    background:var(--yellow); color:var(--black); border:none; cursor:pointer;
+    border-radius:999px; padding:12px 22px; font-size:16px; font-weight:900;
+    box-shadow:0 2px 8px rgba(0,0,0,.18);
+  }
+  .pp-btn:active{ transform:scale(.97); }
   @keyframes os-pulse{ 0%,100%{ transform:scale(1); } 50%{ transform:scale(1.18); } }
   .ready-banner{
     position:fixed; top:0; left:0; right:0; z-index:95;
@@ -597,6 +614,41 @@
     width:40px; height:40px; border-radius:50%; font-size:22px; font-weight:900; line-height:1;
     flex-shrink:0;
   }
+  /* Guide visuel iPhone (2026-11-19, preview) : 3 étapes illustrées
+     pour ajouter Blue Berry à l'écran d'accueil — le client comprend
+     sans explication. Affiché une fois (localStorage), puis la ligne
+     d'état reprend le relais en petit texte. */
+  .ios-guide{
+    max-width:420px; margin:0 auto 18px; background:var(--paper);
+    border:1.5px solid var(--yellow); border-radius:14px; padding:14px 14px 12px;
+    text-align:left;
+  }
+  .ios-guide[hidden]{ display:none; }
+  .ig-title{ margin:0 0 12px; font-size:16px; font-weight:900; color:var(--black); line-height:1.35; }
+  .ig-steps{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:12px; }
+  .ig-step{ display:flex; align-items:center; gap:10px; }
+  .ig-num{
+    width:26px; height:26px; border-radius:50%; flex-shrink:0;
+    background:var(--yellow); color:var(--black);
+    font-size:14px; font-weight:900;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .ig-ico{ width:28px; height:28px; flex-shrink:0; display:flex; align-items:center; justify-content:center; }
+  .ig-ico svg{ width:28px; height:28px; }
+  .ig-bb{ position:relative; width:28px; height:28px; border-radius:7px; overflow:hidden; flex-shrink:0; }
+  .ig-bb-chip{
+    position:absolute; inset:0; background:var(--black); color:var(--yellow);
+    font-size:12px; font-weight:900; display:flex; align-items:center; justify-content:center;
+  }
+  .ig-bb img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+  .ig-txt{ font-size:14.5px; font-weight:700; color:var(--ink); line-height:1.35; }
+  .ig-dismiss{
+    margin-top:14px; width:100%; border:none; cursor:pointer;
+    background:var(--yellow); color:var(--black);
+    border-radius:999px; padding:11px 16px; font-size:15px; font-weight:900;
+    box-shadow:0 2px 8px rgba(0,0,0,.18);
+  }
+  .ig-dismiss:active{ transform:scale(.98); }
 </style>
 </head>
 <body>
@@ -670,7 +722,16 @@
           <div class="os-step" data-step="ready"><span class="os-dot"></span><span class="os-lbl">Prête</span></div>
         </div>
         <p class="os-msg" id="orderStatusMsg">Commande envoyée au comptoir…</p>
-        <p class="os-notif" id="orderNotifStatus"></p>
+        <div class="os-notif" id="orderNotifStatus"></div>
+      </div>
+      <div class="ios-guide" id="iosGuide" hidden>
+        <p class="ig-title">🔔 Recevez la notification quand votre commande est prête</p>
+        <ol class="ig-steps">
+          <li class="ig-step"><span class="ig-num">1</span><span class="ig-ico"><svg viewBox="0 0 24 24" fill="none" stroke="#22303F" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="M7.5 7.5 12 3l4.5 4.5"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg></span><span class="ig-txt">Appuyez sur <b>Partager</b> en bas de Safari</span></li>
+          <li class="ig-step"><span class="ig-num">2</span><span class="ig-ico"><svg viewBox="0 0 24 24" fill="none" stroke="#22303F" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M12 8v8M8 12h8"/></svg></span><span class="ig-txt">Choisissez « <b>Sur l’écran d’accueil</b> »</span></li>
+          <li class="ig-step"><span class="ig-num">3</span><span class="ig-bb"><span class="ig-bb-chip">BB</span><img src="icons/apple-touch-icon.png" alt="" onerror="this.remove()"/></span><span class="ig-txt">Ouvrez <b>Blue Berry</b> depuis l’icône</span></li>
+        </ol>
+        <button class="ig-dismiss" id="iosGuideDismiss" type="button">J’ai compris</button>
       </div>
       <div class="pay-note">
         Paiement au comptoir quand vous aurez terminé.
@@ -4619,6 +4680,70 @@ function isStandaloneApp(){
 }
 function isIosBrowserTab(){ return isIosDevice() && !isStandaloneApp(); }
 
+/* Guide visuel iPhone (2026-11-19, preview) : au lieu de la seule
+   ligne de texte, une carte en 3 étapes illustrées explique l'ajout
+   à l'écran d'accueil — le client comprend sans aide. Affichée une
+   seule fois par appareil (localStorage) ; après « J'ai compris »,
+   la ligne d'état garde la consigne en petit texte (repli). */
+var IOS_GUIDE_KEY = 'blueberry_ios_guide_seen_v1';
+function iosGuideSeen(){
+  try { return window.localStorage.getItem(IOS_GUIDE_KEY) === '1'; } catch(e){ return false; }
+}
+function markIosGuideSeen(){
+  try { window.localStorage.setItem(IOS_GUIDE_KEY, '1'); } catch(e){}
+}
+function showIosGuide(){ var g = document.getElementById('iosGuide'); if (g) g.hidden = false; }
+function hideIosGuide(){ var g = document.getElementById('iosGuide'); if (g) g.hidden = true; }
+var iosGuideDismissBtn = document.getElementById('iosGuideDismiss');
+if (iosGuideDismissBtn) iosGuideDismissBtn.addEventListener('click', function(){
+  markIosGuideSeen();
+  hideIosGuide();
+  if (successOrderId) setNotifStatus(successOrderId, 'ios'); /* repli : la consigne en petit texte */
+});
+
+/* Wake Lock (2026-11-19, preview) : pendant que le client attend sa
+   commande sur l'écran de succès, l'écran reste allumé — la bannière
+   « prête » + le son + la vibration arrivent donc sans permission
+   (le push reste un bonus pour la page fermée). Silencieux : aucun
+   élément d'interface, aucun écrit Firebase. Le navigateur relâche
+   le verrou quand la page passe en arrière-plan : ré-acquis au
+   retour visible si la commande est toujours en cours. Relâché dès
+   que la commande passe à prête/servie/annulée (syncWakeLock via
+   onMyOrderStatus), ou sur « Nouvelle commande ». */
+var wakeLockSentinel = null;
+var wakeLockWanted = false; /* vrai tant que l'écran de succès suit une commande en cours */
+function acquireWakeLock(){
+  try {
+    if (!('wakeLock' in navigator) || wakeLockSentinel) return;
+    var p = navigator.wakeLock.request('screen');
+    if (p && typeof p.then === 'function') {
+      p.then(function(s){
+        wakeLockSentinel = s;
+        try { s.addEventListener('release', function(){ if (wakeLockSentinel === s) wakeLockSentinel = null; }); } catch(e){}
+      }).catch(function(){});
+    }
+  } catch(e){}
+}
+function releaseWakeLock(){
+  try {
+    if (wakeLockSentinel) { var s = wakeLockSentinel; wakeLockSentinel = null; s.release(); }
+  } catch(e){}
+}
+function syncWakeLock(){
+  var o = successOrderId ? myOrders[successOrderId] : null;
+  var active = wakeLockWanted && !!o &&
+    (o.status === null || o.status === 'new' || o.status === 'preparing');
+  if (active) acquireWakeLock(); else releaseWakeLock();
+}
+document.addEventListener('visibilitychange', function(){
+  if (!document.hidden) syncWakeLock(); /* retour au premier plan : ré-acquérir si toujours en attente */
+});
+var newOrderBtnEl = document.getElementById('newOrderBtn');
+if (newOrderBtnEl) newOrderBtnEl.addEventListener('click', function(){
+  wakeLockWanted = false;
+  releaseWakeLock();
+});
+
 /* Ligne d'état des notifications (2026-11-19) : sous le suivi, le
    client voit si le push « commande prête » est actif — et sinon
    pourquoi. État « default » (permission pas encore décidée, ex. le
@@ -4634,17 +4759,30 @@ function setNotifStatus(id, state){
   /* iPhone dans un onglet Safari : pas de push possible sans
      installation — la consigne remplace le message générique. */
   if (state === 'unavailable' && isIosBrowserTab()) state = 'ios';
+  if (state !== 'ios') hideIosGuide();
   el.className = 'os-notif' + (state === 'ok' ? ' os-notif-ok' :
     (state === 'denied' || state === 'unavailable') ? ' os-notif-warn' : '');
+  if (state === 'ios' && !iosGuideSeen()) {
+    /* Première fois sur iPhone : la carte illustrée remplace la
+       ligne de texte (évite le doublon) ; après « J'ai compris »,
+       la consigne reste en petit texte ci-dessous. */
+    showIosGuide();
+    el.textContent = '';
+    return;
+  }
   if (state === 'default') {
-    el.innerHTML = '';
-    var btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'os-notif-btn';
-    btn.id = 'notifEnableBtn';
-    btn.textContent = '🔔 Activer les notifications';
-    btn.addEventListener('click', function(){ requestNotifyPermission(); });
-    el.appendChild(btn);
+    /* Carte d'apprentissage (2026-11-19, preview) : avant le prompt
+       du navigateur, la page explique en une phrase ce qui va se
+       passer — le client tape le bouton puis « Autoriser », sans
+       que personne ait à lui expliquer. Le bouton garde l'id
+       notifEnableBtn (même geste : requestPermission au tap). */
+    el.innerHTML = '<div class="preprompt">' +
+      '<p class="pp-title">🔔 On vous prévient dès que votre commande est prête !</p>' +
+      '<p class="pp-txt">Appuyez sur le bouton, puis sur « Autoriser ».</p>' +
+      '<button type="button" class="pp-btn" id="notifEnableBtn">🔔 Activer les notifications</button>' +
+      '</div>';
+    var btn = el.querySelector('#notifEnableBtn');
+    if (btn) btn.addEventListener('click', function(){ requestNotifyPermission(); });
     return;
   }
   el.textContent =
@@ -4685,6 +4823,7 @@ function onMyOrderStatus(id, st){
   var first = !o.seenFirst;
   o.seenFirst = true;
   o.status = st;
+  syncWakeLock(); /* écran allumé tant que la commande affichée est en cours ; relâché à prête/servie/annulée */
   if (st === 'ready' && !o.notifiedReady) {
     o.notifiedReady = true;
     showReadyBanner(o.table);
@@ -4731,6 +4870,8 @@ function trackPlacedOrder(id, table){
   setNotifStatus(id, 'pending');
   phase2PushHook(id);
   renderOrderStatus(id, 'new');
+  wakeLockWanted = true; /* écran de succès : garder l'écran allumé pendant l'attente */
+  syncWakeLock();
 }
 function startMyOrdersWatch(){
   if (myOrdersWatchStarted) return;
@@ -4837,13 +4978,22 @@ function registerPushToken(id){
       fcmTokenPending[id] = false;
       if (!token) { setNotifStatus(id, 'unavailable'); return; }
       if (fcmTokenByOrder[id] === token) { setNotifStatus(id, 'ok'); return; }
-      var ref = getDb().ref('blueberry-orders/' + id + '/pushToken');
-      return ref.once('value').then(function(snap){
-        if (snap.val() === token) { fcmTokenByOrder[id] = token; setNotifStatus(id, 'ok'); return; }
-        return ref.set(token).then(function(){ fcmTokenByOrder[id] = token; setNotifStatus(id, 'ok'); });
-      }).catch(function(){
-        return ref.set(token).then(function(){ fcmTokenByOrder[id] = token; setNotifStatus(id, 'ok'); });
-      });
+      /* Anti-fantôme (2026-11-19) : vérifier que la commande existe
+         encore ET est en cours avant d'écrire le jeton — un set sur
+         pushToken d'une commande supprimée créerait un nœud
+         {pushToken} seul, rendu « Table ? » / 0 DH au comptoir
+         (startMyOrdersWatch relance ce hook pour chaque commande
+         mémorisée à chaque ouverture). Commande disparue → oubliée
+         de la mémoire de l'appareil, rien n'est écrit. */
+      var orderRef = getDb().ref('blueberry-orders/' + id);
+      return orderRef.once('value').then(function(snap){
+        var order = snap.val();
+        if (!order) { myOrdersForget(id); return; }
+        if (order.status !== 'new' && order.status !== 'preparing') return;
+        if (order.pushToken === token) { fcmTokenByOrder[id] = token; setNotifStatus(id, 'ok'); return; }
+        return getDb().ref('blueberry-orders/' + id + '/pushToken').set(token)
+          .then(function(){ fcmTokenByOrder[id] = token; setNotifStatus(id, 'ok'); });
+      }).catch(function(){ /* lecture impossible : ne rien écrire (jamais de nœud fantôme) */ });
     }).catch(function(){
       fcmTokenPending[id] = false;
       setNotifStatus(id, 'unavailable');
